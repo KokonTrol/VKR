@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-grid gap-2 col-6 mx-auto">
+    <div class="mb-3">
+        <label for="formFile" class="form-label">Пример ввода файла по умолчанию</label>
+        <input class="form-control" type="file" id="formFile">
+      </div>
+    <button class="btn btn-primary" type="button">Загрузить</button>
+  </div>
+<div class="dropdown">
+    <select class="form-select form-select-lg mb-3" aria-label=".form-select-lg пример">
+        <option selected>Откройте это меню выбора</option>
+        <option value="1">Один</option>
+        <option value="2">Два</option>
+        <option value="3">Три</option>
+      </select>
+    <button type="button" class="btn btn-outline-primary center">Анализ</button>
+
+  </div>
+
+{% endblock %}
