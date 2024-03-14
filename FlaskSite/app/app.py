@@ -1,11 +1,22 @@
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from models import *
+from getTableBD import _FillDataEducation
 app = Flask(__name__)
+dataEducation = {}
+_isFirstRun = True
+
+@app.before_request
+def beforeRequest():
+	global _isFirstRun, dataEducation
+	if _isFirstRun:
+		dataEducation = _FillDataEducation()
+		_isFirstRun = False
 
 @app.route('/')
 def hello_world():
-	return render_template('load_page.html')
+	global dataEducation
+	return render_template('load_page.html', data=dataEducation.keys())
 @app.route('/load')
 def load_db():
 	with app.app_context():
