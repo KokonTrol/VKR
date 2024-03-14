@@ -9,6 +9,7 @@ class Subject(db.Model):
 class Results(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     succes_done = db.Column(db.Boolean, default=False)
+    score = db.Column(db.Float, default=0.0)
 
 class Comands(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -23,5 +24,6 @@ class Scores(db.Model):
     comands_id = db.Column(db.Integer, db.ForeignKey('comands.id'), nullable=False)
     comands = db.relationship('Comands', backref=db.backref('scores', lazy=True))
     visiting = db.Column(db.Float, default=0.0)
-    scores = db.Column(db.Float, default=0.0)
+    scores_before = db.Column(db.Float, default=0.0)
+    scores_test = db.Column(db.Float, default=0.0)
     test_number = db.Column(db.Integer, nullable=False)
