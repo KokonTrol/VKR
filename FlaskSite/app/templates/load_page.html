@@ -1,65 +1,53 @@
 {% extends 'base.html' %}
 
+{% block jsConnect %}
+<script src="{{ url_for('static', filename='getTestsList.js') }}"></script>
+<script src="{{ url_for('static', filename='getPrediction.js') }}"></script>
+{% endblock %}
+
 {% block content %}
-<form id="loadDataForm" enctype="multipart/form-data" action="/"
-method="post" class="d-grid gap-2 col-6 mx-auto">
-		<select class="form-select form-select-lg mb-3" 
-			aria-label=".form-select-lg"
-			name="selectSubject">
-				<option>Не выбрано</option>
-				{% for sub in subjects %}
-				<option value="{{sub}}">{{sub}}</option>
-				{% endfor %}
-			</select>
-			<div class="mb-3">
-				<label for="formFile" class="form-label">Зарузите файл для прогнозирования</label>
-				<input class="form-control" type="file" name="formFile" accept=".xls,.xlsx">
-			</div>
+    <div class="d-grid gap-2 col-6 mx-auto">
+        <select class="form-select form-select-lg mb-3" 
+            aria-label=".form-select-lg"
+            id = "selectSubject"
+            name="selectSubject">
+                <option>Не выбрано</option>
+                {% for sub in subjects %}
+                <option value="{{sub}}">{{sub}}</option>
+                {% endfor %}
+        </select>
+        <div class="mb-3">
+            <label for="formFile" class="form-label">Зарузите файл для прогнозирования</label>
+            <input class="form-control" type="file" 
+            id = "formFileInput"  name="formFile" accept=".xls,.xlsx">
+        </div>
+        <select class="form-select form-select-lg mb-3" 
+            aria-label=".form-select-lg"
+            name="selectTest"
+            id="selectTest">
+                {% for t in tests %}
+                {% endfor %}
+        </select>
+        <button type="submit" id="testPredictionButton" class="btn btn-outline-primary center">Прогнозировать баллы контрольной</button>
 
-			{% if tests|length > 0 %}
-			    <select class="form-select form-select-lg mb-3" 
-				aria-label=".form-select-lg"
-				name="selectTest">
-					{% for t in tests %}
-					<option value="{{t}}">{{t}}</option>
-					{% endfor %}
-				</select>
-                <button type="submit" value="testPrediction" class="btn btn-outline-primary center">Загрузить</button>
+        <button type="submit" id="examPredictionButton" class="btn btn-outline-primary center">Прогнозировать сдачу на основе контрольной</button>
+    </div>
+    
 
-            {% else %}
-                <button type="submit" value="examPrediction" class="btn btn-outline-primary center">Загрузить</button>
-                <button type="submit" value="testPrediction" class="btn btn-outline-primary center">Загрузить</button>
-
-			{% endif %}
-				
-	</form>
-<div class="dropdown">
-			<button class="btn btn-primary" type="button">Анализ</button>
-
-	</div>
 	<div class="spinner-border" role="status">
 		<span class="visually-hidden">Загрузка...</span>
 	</div>
     
-    {% if results %}
     <table class="table table-striped table-hover">
 		<thead>
 			<tr>
 				<th scope="col">ФИО</th>
-				<th scope="col">Прогноз сдачи</th>
+				<th scope="col">Прогноз</th>
 			</tr>
 		</thead>
-		<tbody>
-            
-            {% for s, r in results %}
-            <tr>
-				<td>{{s}}</td>
-				<td>{{r}}</td>
-			</tr>
-            {% endfor %}
+		<tbody id="tableResultBody">
 		</tbody>
 	</table>
-    {% endif %}
         
 	
 {% endblock %}
