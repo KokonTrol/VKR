@@ -1,8 +1,5 @@
 import pandas as pd
 
-def GetTestName(file):
-    pass
-
 def GetInfoLose(goal):
     return 1 if float(goal)>=61 else 0
 
@@ -17,15 +14,11 @@ def _ConvertEveryRow(sheet):
         if (group["Название встречи"].str.contains('Контрольная ').sum()==0):
             print(" Контрольных не найдено")
             continue
-        percent = 0
         count_presence = 0
         summ_presence = 0
         count_goals = 0
         for index, row in group.iterrows ():
             
-            if (index%(len(group)//10)==0):
-                print(f"{percent}%. Записей в итоге: {len(results)}")
-                percent+=10
 
             if temp_row == "" or temp_row != row["ФИО студента"]:
                 count_presence = summ_presence = 0
@@ -48,7 +41,7 @@ def _ConvertEveryRow(sheet):
                     results = results.astype(convert_dict)
 
                 if (row["Предмет контроля"] != "Посещение"):
-                    results.loc[((results['ФИО'] == temp_row)), row["Название встречи"]] = row["Оценка за предметы контроля"]
+                    results.loc[((results['ФИО'] == temp_row)), row["Название встречи"]] = float(row["Оценка за предметы контроля"]) if row["Оценка за предметы контроля"]!="" else 0.0
                 else:
                     meeting_name = row["Название встречи"]
                     if count_presence == 0 or results.loc[((results['ФИО'] == temp_row)), f"Посещение до {meeting_name}"].values[0]!="":
