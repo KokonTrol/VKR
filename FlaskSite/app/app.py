@@ -129,7 +129,7 @@ def _getStatusCodeData(request):
             education = None
             if subject not in dataEducation.keys():
                 testsCount = len(list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns))
-                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-3)/3==float(testsCount)]
+                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-2)/3==float(testsCount)] #делать -3, если будет команда снова
                 education = pd.concat(concatData, axis=0)
             else:
                 education = dataEducation[subject]
