@@ -162,7 +162,7 @@ def getTestPrediction():
     else:
         res = list(educationed.GetTest(data, test))
         data = data.reset_index(drop=True)
-        pairs = [{"name": data["ФИО"][i], "result": res[i]} for i in range(len(res))]
+        pairs = [{"name": data["ФИО"][i], "result": int(res[i])} for i in range(len(res))]
         resp = jsonify(pairs)
         resp.status_code = 200
         return resp

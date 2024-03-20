@@ -1,15 +1,13 @@
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.svm import SVR
+from sklearn.linear_model import LinearRegression
+
 from sklearn.tree import DecisionTreeRegressor
 import warnings
 warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 
-# оценка
-Linear_discriminant = LinearDiscriminantAnalysis()
-# контрольная
-SVC_model = SVR(kernel='linear')
 
 class Education():
     def __init__(self, _data):
@@ -20,22 +18,22 @@ class Education():
         convert_dict = {name: float for name in self.being+self.scores+self.exams+["Сдал(-а)"]}
         self.data = self.data.astype(convert_dict)
         self._not_for_prediction = ["ФИО", "Команда", "Направление", "Сдал(-а)", "Пол", "Оценка", "Баллы", "Повышение оценки"]
-        self.DTR_model = DecisionTreeRegressor()
-        self.Linear_discriminant = LinearDiscriminantAnalysis()
+        self.DTR_model = LinearDiscriminantAnalysis()
+        self.LinearRegression = LinearRegression()
 
     def GetExam(self, prediction, ex):
         X = self.data[self.data.loc[:,:ex].columns.difference(self._not_for_prediction)]
         Y = self.data["Сдал(-а)"].to_list()
-        self.Linear_discriminant.fit(X, Y)
+        self.DTR_model.fit(X, Y)
         prediction = prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction)]
-        result = self.Linear_discriminant.predict(prediction)
+        result = self.DTR_model.predict(prediction)
         return result
 
     def GetTest(self, prediction, ex):
         X = np.array(pd.DataFrame(self.data[self.data.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])]))
         Y = np.array(self.data[ex])
-        self.DTR_model.fit(X, Y)
-        data_prediction = self.DTR_model.predict(prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])])
+        self.LinearRegression.fit(X, Y)
+        data_prediction = self.LinearRegression.predict(prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])])
         # data_prediction = [y_train_original[list(y_train).index(i)] for i in data_prediction]
         # print(accuracy_score(data_prediction, y_test))  
         return data_prediction
