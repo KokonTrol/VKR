@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block jsConnect %}
+
+{% endblock %}
+
+{% block content %}
+
+{% if msg|length > 0 %}
+    
+    {% for m in msg %}
+    <div class="alert alert-warning">{{m}}</div>
+    {% endfor %}
+        
+{% endif %}
+<div class="d-grid gap-2 col-6 mx-auto">
+<form id="loginForm" action="" method="post">
+    <div class="form-floating mb-3">
+        <input type="text" class="form-control" name="login" id="login" placeholder="login">
+        <label for="floatingInput">Логин</label>
+      </div>
+      <div class="form-floating">
+        <input type="password" class="form-control" name="password" id="password" placeholder="password">
+        <label for="floatingPassword">Пароль</label>
+      </div>
+    <button type="submit" class="btn btn-primary">Войти</button>
+  </form>
+</div>    
+	
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block jsConnect %}
+{% endblock %}
+
+{% block admin_bar %}
+<li class="nav-item">
+    <a class="nav-link" href="/admin_logout">Выйти</a>        
+</li>
+{% endblock %}
+
+{% block content %}
+{% if msg|length > 0 %}
+    
+    {% for m in msg %}
+    <div class="alert alert-warning">{{m}}</div>
+    {% endfor %}
+        
+{% endif %}
+    <div class="d-grid gap-2 col-6 mx-auto">
+        <select class="form-select form-select-lg mb-3" 
+            aria-label=".form-select-lg"
+            id = "selectSubject"
+            name="selectSubject">
+                <option>Не выбрано</option>
+                {% for sub in subjects %}
+                <option value="{{sub}}">{{sub}}</option>
+                {% endfor %}
+        </select>
+        <div class="mb-3">
+            <label for="formFile" class="form-label">Напишите название дисциплины</label>
+            <input class="form-control" type="text" 
+            id = "formSubjectInput"  name="formSubjectInput">
+        </div>
+        <button type="submit" id="addEducationdata" class="btn btn-outline-primary center">Добавить данные прогнозирования</button>
+    </div>
+    
+{% endblock %}

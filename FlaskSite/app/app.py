@@ -1,18 +1,34 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask_migrate import Migrate
+from flask_login import LoginManager, login_required, login_user, current_user, logout_user
+
 from models import *
 from getTableBD import _FillDataEducation as _FillDataEducation
 from prediction import Education
 from convertData import Convert as ConvertLoadedData
 import pandas as pd
 import io
-import logging
 import random
+
+from env import *
 
 app = Flask(__name__)
 dataEducation = {}
 _isFirstRun = True
 ALLOWED_EXTENSIONS = {'xls', 'xlsx'}
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8'.format(username=DBUSER,
+		password=DBPASSWORD, host=DBHOST, port=DBPORT, db=DBNAME)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SECRET_KEY'] = SECRETKEY
+db.init_app(app)
+migrate = Migrate(app, db)
+login_manager = LoginManager(app)
+login_manager.login_view = 'admin_login'
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.query(Admin).get(user_id)
+    
+
 
 test_file = "G:\\Мой диск\\Учёба\\8 семестр\\диплом\\Проект\\VKR\\FlaskSite\\тест алгебра.xlsx"
 test_select=[]
@@ -86,6 +102,40 @@ def beforeRequest():
         test_select=list(dataEducation.keys())
         test_select.append("new")
         _isFirstRun = False
+
+@app.route('/admin_panel', methods = ['get', 'post'])
+@login_required
+def admin_panel():
+    return render_template('admin_panel.html')
+
+@app.route('/admin_login', methods = ['get', 'post'])
+def admin_login():
+    msg = []
+    if request.method == "POST":
+        print(request.form.get('login'))
+        print(request.form.get('password'))
+        user = db.session.query(Admin).filter(Admin.username == request.form.get('login')).first()
+        if len(request.form.get('password'))<8:
+            msg.append("Длина пароля должна быть больше 8 символов")
+        elif (user):
+            if user.password == None:
+                user.set_password(request.form.get('password'))
+                db.session.commit()
+            if user.check_password(request.form.get('password')):
+                login_user(user, remember=False)
+                return redirect(url_for('admin_panel'))
+        else:
+            msg.append("Неверный логин или пароль")
+        return render_template('admin_login.html', msg = msg)
+    else:
+        return render_template('admin_login.html', msg = [])
+
+@app.route('/admin_logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('admin_login'))
+
 
 @app.route('/api/get_tests/', methods = ['post'])
 def getTestsNames():
@@ -172,9 +222,6 @@ def loadData():
     return render_template('load_page.html', subjects=dataEducation.keys())
 
 if __name__ == '__main__':
-	app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8'.format(username="kokon",
-		password="TrOlOlO123))", host="127.0.0.1", port=3306, db="prediction")
-	app.config['TEMPLATES_AUTO_RELOAD'] = True
-	db.init_app(app)
 	app.run(debug=True, port=8000)
+
 
