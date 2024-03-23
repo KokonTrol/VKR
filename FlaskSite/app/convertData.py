@@ -6,60 +6,80 @@ def GetInfoLose(goal):
 def _ConvertEveryRow(sheet):
     temp_row = ""
     for name, group in sheet.groupby(["Название РМУП"]):
-        results = pd.DataFrame(columns=["ФИО", "Команда", "Баллы", "Сдал(-а)"])
+        if "Предмет контроля" not in group.columns:
+            continue
+        name_column_test = ""
+        if "Контрольная работа" in set(list(group["Предмет контроля"])):
+            name_column_test = "Контрольная работа"
+        else:
+            name_column_test = "Работа на учебной встрече"
+        results = pd.DataFrame(columns=["ФИО", "Пол", "Команда", "Баллы", "Сдал(-а)"])
 
         name_discipline = group.head(1)["Название РМУП"].values[0]
-        print(name_discipline, end=":")
-        # try:
-        if (group["Название встречи"].str.contains('Контрольная ').sum()==0):
-            print(" Контрольных не найдено")
-            continue
-        count_presence = 0
-        summ_presence = 0
-        count_goals = 0
-        for index, row in group.iterrows ():
-            
+        try:
+            if (group["Название встречи"].str.contains('Контрольная ').sum()==0 and name_column_test!="Контрольная работа"):
+                continue
 
-            if temp_row == "" or temp_row != row["ФИО студента"]:
-                count_presence = summ_presence = 0
-                temp_row = row["ФИО студента"]
-                results.loc[-1] = [temp_row, row["Команда"], row["Итог ТУ"], GetInfoLose(row["Итог ТУ"])] + [""]*(len(results.columns)-4)
-                results.index = results.index + 1  # shifting index
-            
-            if ("Контрольная " in row["Название встречи"]):
-                if (row["Название встречи"] not in list(results.columns)):
-                    meeting_name = row["Название встречи"]
-                    if (f"Посещение до {meeting_name}" not in list(results.columns)):
-                        results[f"Посещение до {meeting_name}"] = 0
-                        results[f"Баллы до {meeting_name}"] = 0
-                    results[meeting_name] = 0
-                    convert_dict = {f"Посещение до {meeting_name}": float,
-                                    f"Баллы до {meeting_name}": float,
-                                    meeting_name: float,
-                                    "Баллы": float
-                                }
-                    results = results.astype(convert_dict)
+            percent = 0
+            count_presence = 0
+            summ_presence = 0
+            count_goals = 0
+            # номер контрольной
+            test_number = 1
+            for index, row in group.iterrows ():
+                
+                if (index%(len(group)//10)==0):
+                    print(f"{percent}%. Записей в итоге: {len(results)}")
+                    percent+=10
 
-                if (row["Предмет контроля"] != "Посещение"):
-                    results.loc[((results['ФИО'] == temp_row)), row["Название встречи"]] = float(row["Оценка за предметы контроля"]) if row["Оценка за предметы контроля"]!="" else 0.0
+                if temp_row == "" or temp_row != row["ФИО студента"]:
+                    test_number = 1
+                    count_presence = summ_presence = 0
+                    temp_row = row["ФИО студента"]
+                    results.loc[-1] = [temp_row,row["Команда"], row["Итог ТУ"], GetInfoLose(row["Итог ТУ"])] + [""]*(len(results.columns)-4)
+                    results.index = results.index + 1
+                
+                if ("Контрольная " in row["Название встречи"] or "Контрольная работа" == row["Предмет контроля"]):
+                    if (f"Контрольная работа {test_number}" not in list(results.columns)):
+
+                        meeting_name = f"Контрольная работа {test_number}"
+                        if (f"Посещение до {meeting_name}" not in list(results.columns)):
+                            results[f"Посещение до {meeting_name}"] = 0
+                            results[f"Баллы до {meeting_name}"] = 0
+                        results[meeting_name] = 0
+                        convert_dict = {f"Посещение до {meeting_name}": float,
+                                        f"Баллы до {meeting_name}": float,
+                                        meeting_name: float,
+                                        "Баллы": float
+                                    }
+                        results = results.astype(convert_dict)
+
+                    if (row["Предмет контроля"] == name_column_test):
+                        
+                        results.loc[((results['ФИО'] == temp_row)), f"Контрольная работа {test_number}"] = row["Оценка за предметы контроля"] if row["Оценка за предметы контроля"] else 0
+                        meeting_name = f"Контрольная работа {test_number}"
+                        if count_presence == 0:
+                            continue
+                        results.loc[((results['ФИО'] == temp_row)), f"Посещение до {meeting_name}"] = round(summ_presence / float(count_presence), 2)
+                        results.loc[((results['ФИО'] == temp_row)), f"Баллы до {meeting_name}"] = count_goals
+                        if (temp_row=="Абатуров Георгий Сергеевич"):
+                            print(summ_presence, count_presence, count_goals)
+                        count_presence = summ_presence = count_goals = 0
+                        test_number+=1
+
+
+                elif (row["Предмет контроля"] != "Посещение"):
+                    if not pd.isna(row["Оценка за предметы контроля"]):
+                        t = row["Оценка за предметы контроля"]
+                        count_goals += float(row["Оценка за предметы контроля"])
                 else:
-                    meeting_name = row["Название встречи"]
-                    if count_presence == 0 or results.loc[((results['ФИО'] == temp_row)), f"Посещение до {meeting_name}"].values[0]!="":
-                        continue
-                    results.loc[((results['ФИО'] == temp_row)), f"Посещение до {meeting_name}"] = round(summ_presence / float(count_presence), 2)
-                    results.loc[((results['ФИО'] == temp_row)), f"Баллы до {meeting_name}"] = count_goals
-
-                    count_presence = summ_presence = count_goals = 0
-
-            elif (row["Предмет контроля"] != "Посещение"):
-                if not pd.isna(row["Оценка за предметы контроля"]):
-                    t = row["Оценка за предметы контроля"]
-                    count_goals += float(row["Оценка за предметы контроля"])
-            else:
-                count_presence += 1
-                if row["Оценка за предметы контроля"]=="П":
-                    summ_presence += 1
+                    count_presence += 1
+                    if row["Оценка за предметы контроля"]=="П":
+                        summ_presence += 1
+            results.drop(results.columns[-3:], axis= 1 , inplace= True ) 
             
+        except Exception as e:
+            print(e)
         results = results.fillna(0)
         return results
         # except Exception as e:
