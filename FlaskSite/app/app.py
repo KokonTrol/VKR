@@ -27,69 +27,6 @@ login_manager.login_view = 'admin_login'
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.query(Admin).get(user_id)
-    
-
-
-test_file = "G:\\Мой диск\\Учёба\\8 семестр\\диплом\\Проект\\VKR\\FlaskSite\\тест алгебра.xlsx"
-test_select=[]
-@app.route('/test/get_tests')
-def getTestsNamestest():
-    global test_file, test_select
-
-    select = test_select[random.randrange(4)]
-    if select and select in dataEducation.keys():
-        resp = jsonify(
-            list(dataEducation[select][dataEducation[select].columns[pd.Series(dataEducation[select].columns).str.startswith('Контрольная ')]].columns)
-        )
-        resp.status_code = 200
-    else:
-        file = test_file
-        if file and allowed_file(file):
-            data = ConvertLoadedData(test_file)
-            tests = list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns)
-            resp = jsonify(tests)
-            resp.status_code = 200
-        else:
-            resp = jsonify({"message": "Неправильный вид файла"})
-            resp.status_code = 400
-    return resp
-
-@app.route('/test/get_exam_prediction')
-def getExamPredictiontest():
-    global test_file, test_select
-    subject = test_select[random.randrange(4)]
-    test = "Контрольная работа 1"
-    if not test or not subject:
-        resp = jsonify({"message": "Не загружены файлы для нахождения контрольных или не выбрана контрольная"})
-        resp.status_code = 400
-    else:
-        file = test_file
-
-        if file and allowed_file(file):
-            data = ConvertLoadedData(file)
-            education = None
-            if subject not in dataEducation.keys():
-                testsCount = len(list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns))
-                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-3)/3==float(testsCount)]
-                education = pd.concat(concatData, axis=0)
-            else:
-                education = dataEducation[subject]
-            educationed = Education(education)
-
-            res = list(educationed.GetExam(data, test))
-            pairs = [{"name": data["ФИО"][i], "result": res[i]} for i in range(len(res))]
-            resp = jsonify(pairs)
-            resp.status_code = 200
-        else:
-            resp = jsonify({"message": "Неправильный вид файла"})
-            resp.status_code = 400
-    return resp
-
-
-
-
-
-
 
 def allowed_file(filename):
    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -106,7 +43,7 @@ def beforeRequest():
 @app.route('/admin_panel', methods = ['get', 'post'])
 @login_required
 def admin_panel():
-    return render_template('admin_panel.html')
+    return render_template('admin_panel.html', subjects=dataEducation.keys())
 
 @app.route('/admin_login', methods = ['get', 'post'])
 def admin_login():
@@ -154,10 +91,11 @@ def getTestsNames():
     else:
         file = request.files.get("formFile")
         if file and allowed_file(file.filename):
-            data = ConvertLoadedData(io.BytesIO(file.read()))
+            data = ConvertLoadedData(io.BytesIO(file.read()), True)
             tests = list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns)
             resp = jsonify(tests)
             resp.status_code = 200
+            del tests, data, select
             return resp
         else:
             resp = jsonify({"message": "Неправильный вид файла"})
@@ -179,7 +117,7 @@ def _getStatusCodeData(request):
             education = None
             if subject not in dataEducation.keys():
                 testsCount = len(list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns))
-                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-2)/3==float(testsCount)] #делать -3, если будет команда снова
+                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-3)/3==float(testsCount)] #делать -3, если будет команда снова
                 education = pd.concat(concatData, axis=0)
             else:
                 education = dataEducation[subject]
@@ -202,6 +140,7 @@ def getExamPrediction():
         pairs = [{"name": data["ФИО"][i], "result": res[i]} for i in range(len(res))]
         resp = jsonify(pairs)
         resp.status_code = 200
+        del educationed, data, test
         return resp
 
 @app.route('/api/get_test_prediction', methods = ['post'])
@@ -215,11 +154,16 @@ def getTestPrediction():
         pairs = [{"name": data["ФИО"][i], "result": int(res[i])} for i in range(len(res))]
         resp = jsonify(pairs)
         resp.status_code = 200
+        del educationed, data, test
         return resp
 
 @app.route('/', methods = ['POST', 'GET'])
 def loadData():
     return render_template('load_page.html', subjects=dataEducation.keys())
+
+@app.route('/solo', methods = ['POST', 'GET'])
+def loadDataSolo():
+    return render_template('solo_page.html', subjects=dataEducation.keys())
 
 if __name__ == '__main__':
 	app.run(debug=True, port=8000)

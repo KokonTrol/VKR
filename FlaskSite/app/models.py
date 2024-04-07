@@ -29,7 +29,8 @@ class Results(db.Model):
     comands = db.relationship('Comands', backref=db.backref('results', lazy=True))
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
     subject = db.relationship('Subject', backref=db.backref('results', lazy=True))
-    
+    gender = db.Column(db.Boolean, nullable=False, default=False)
+
 class Comands(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)

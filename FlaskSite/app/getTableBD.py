@@ -27,7 +27,7 @@ def _makeTable(loaded, scores, maxTestNumber):
             loaded = loaded.astype(convert_dict)
     for score in scores:
         if score.result_id not in list(loaded["id результата"]):
-            loaded.loc[-1] = [score.result_id, score.result.score, 1 if score.result.succes_done else 0] + [0.0]*(len(loaded.columns)-3) # 2, score.comands.name, 
+            loaded.loc[-1] = [score.result_id, score.result.gender, score.result.score, 1 if score.result.succes_done else 0] + [0.0]*(len(loaded.columns)-4) # 2, score.comands.name, 
             loaded.index = loaded.index + 1  # shifting index
         meeting_name = f"Контрольная работа {score.test_number}"
         loaded.loc[((loaded['id результата'] == score.result_id)), f"Баллы до {meeting_name}"] = score.scores_before
@@ -38,7 +38,7 @@ def _makeTable(loaded, scores, maxTestNumber):
     return loaded
 
 def GetTableFromDBSubjectName(db, subjectName: str):
-    loaded = pd.DataFrame(columns=["id результата", "Баллы", "Сдал(-а)"]) # 2 "Команда", 
+    loaded = pd.DataFrame(columns=["id результата", "Пол", "Баллы", "Сдал(-а)"]) # 2 "Команда", 
     subject = db.session.query(Subject).filter_by(name=subjectName).first()
     if subject != None:
         results = [r[0] for r in set(db.session.query(Results.id).filter_by(subject_id=subject.id))]
