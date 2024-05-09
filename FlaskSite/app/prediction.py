@@ -1,5 +1,5 @@
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LinearRegression
+from catboost import CatBoostRegressor
 import warnings
 warnings.filterwarnings('ignore')
 import pandas as pd
@@ -17,7 +17,7 @@ class Education():
         self._not_for_prediction = ["ФИО", "Команда", "Направление", "Сдал(-а)", "Оценка", "Баллы", "Повышение оценки"]
         # self.DTR_model = LinearDiscriminantAnalysis()
         self.knn = KNeighborsClassifier(n_neighbors=2)
-        self.LinearRegression = LinearRegression()
+        self.catboost = CatBoostRegressor(iterations=200, depth=14, learning_rate=0.01, silent=True, allow_writing_files=False)
 
     def GetExam(self, prediction, ex):
         X = self.data[self.data.loc[:,:ex].columns.difference(self._not_for_prediction)]
@@ -30,7 +30,7 @@ class Education():
     def GetTest(self, prediction, ex):
         X = np.array(pd.DataFrame(self.data[self.data.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])]))
         Y = np.array(self.data[ex])
-        self.LinearRegression.fit(X, Y)
+        self.catboost.fit(X, Y)
         data_prediction = self.LinearRegression.predict(prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])])
         # data_prediction = [y_train_original[list(y_train).index(i)] for i in data_prediction]
         # print(accuracy_score(data_prediction, y_test))  

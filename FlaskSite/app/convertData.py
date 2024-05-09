@@ -57,7 +57,7 @@ def _ConvertEveryRow(sheet, one_row = False):
                         break
                     # обнуление счетчиков
                     test_number = 1
-                    count_presence = summ_presence = 0
+                    count_presence = summ_presence = count_goals = 0
                     # добавление записи в Dataframe
                     temp_row = row["ФИО студента"]
                     results.loc[-1] = [temp_row, GetGender(temp_row), row["Команда"], \

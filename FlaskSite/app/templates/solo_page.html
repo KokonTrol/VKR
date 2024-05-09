@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block jsConnect %}
+<script src="{{ url_for('static', filename='getTestsList.js') }}"></script>
+<script src="{{ url_for('static', filename='getPrediction.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="d-grid gap-2 col-6 mx-auto">
+        <select class="form-select form-select-lg mb-3" 
+            aria-label=".form-select-lg"
+            id = "selectSubject"
+            name="selectSubject">
+                <option>Не выбрано</option>
+                {% for sub in subjects %}
+                <option value="{{sub}}">{{sub}}</option>
+                {% endfor %}
+        </select>
+        
+        <select class="form-select form-select-lg mb-3" 
+            aria-label=".form-select-lg"
+            name="selectTest"
+            id="selectTest">
+                {% for t in tests %}
+                {% endfor %}
+        </select>
+        <span> 
+            <label for="textBeingInput" class="form-label">Посещаемость до КР 1</label>
+            <input class="form-control"
+            id = "textBeingInput" type="number" placeholder="1.0" step="0.01" min="0" max="1">
+        </span>
+        <span> 
+            <label for="textCountInput" class="form-label">Баллы до КР 1</label>
+            <input class="form-control"
+            id = "textCountInput" type="number" placeholder="1.0" step="0.01" min="0">
+        </span>
+        <span> 
+            <label for="textCountInput" class="form-label">Баллы КР 1</label>
+            <input class="form-control"
+            id = "textCountInput" type="number" placeholder="1.0" step="0.01" min="0">
+        </span>
+        <div class="mb-3" id="loadDataBlock">
+            <span> 
+                <label for="formFile" class="form-label">Зарузите файл для прогнозирования</label>
+                <input class="form-control" type="file" 
+                id = "formFileInput"  name="formFile" accept=".xls,.xlsx">
+            </span>
+            
+        </div>
+        <button type="submit" id="testPredictionButton" class="btn btn-outline-primary center">Прогнозировать баллы контрольной</button>
+
+        <button type="submit" id="examPredictionButton" class="btn btn-outline-primary center">Прогнозировать сдачу на основе контрольной</button>
+    
+        <div class="d-grid gap-2 col-6 mx-auto">
+            <span id="studentResult"> 
+                Результаты
+                <div class="alert alert-info text-center" role="alert">
+                    <h3>Выши результаты будут тут</h3>
+                  </div>
+            </span>
+        </div>
+    
+    </div>
+    
+    
+        
+	
+{% endblock %}
