@@ -17,7 +17,7 @@ class PredictClass():
         self.data = self.data.astype(convert_dict)
         self._not_for_prediction = ["ФИО", "Команда", "Направление", "Не сдал(-а)", "Оценка", "Баллы", "Повышение оценки"]
         # self.DTR_model = LinearDiscriminantAnalysis()
-        self.ab = AdaBoostClassifier(base_estimator=LogisticRegression(), learning_rate=2.0, n_estimators=48)
+        self.ab = AdaBoostClassifier(estimator=LogisticRegression(), learning_rate=2.0, n_estimators=48)
         self.lr = LinearRegression()
 
     def GetExam(self, prediction, ex):

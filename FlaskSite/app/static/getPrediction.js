@@ -1,7 +1,7 @@
 function MakeRowResultExam(valueFio, valueRes){
     var obj = `<tr ${valueRes >= 0.5 ? 'class="table-danger"' : ''}>
         <td>${valueFio}</td>
-        <td>${valueRes}</td>
+        <td>${(valueRes*100).toFixed(2)}%</td>
         </tr>`;
     return obj;
 }
