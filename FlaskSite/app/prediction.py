@@ -1,42 +1,45 @@
-from sklearn.neighbors import KNeighborsClassifier
-from catboost import CatBoostRegressor
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.linear_model import LogisticRegression, LinearRegression
 import warnings
 warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
+from itertools import chain
 
-
-class Education():
+class PredictClass():
     def __init__(self, _data):
-        self.data = _data
-        self.exams = [name  for name in self.data.columns.to_list() if name.startswith("Контрольная")]
-        self.scores = [name  for name in self.data.columns.to_list() if name.startswith("Баллы ")]
-        self.being = [name  for name in self.data.columns.to_list() if name.startswith("Посещение ")]
-        convert_dict = {name: float for name in self.being+self.scores+self.exams+["Сдал(-а)"]}
+        self.exams = [name  for name in _data.columns.to_list() if name.startswith("Контрольная")]
+        self.scores = [name  for name in _data.columns.to_list() if name.startswith("Баллы ")]
+        self.before = [name  for name in _data.columns.to_list() if name.startswith("Процент ")]
+        self.being = [name  for name in _data.columns.to_list() if name.startswith("Посещение ")]
+        self.data = _data.drop(_data.columns.difference(["Не сдал(-а)", "Пол"]+self.exams+self.scores+self.being+self.before), axis=1)
+        convert_dict = {name: float for name in self.being+self.scores+self.exams+self.before+["Не сдал(-а)"]}
         self.data = self.data.astype(convert_dict)
-        self._not_for_prediction = ["ФИО", "Команда", "Направление", "Сдал(-а)", "Оценка", "Баллы", "Повышение оценки"]
+        self._not_for_prediction = ["ФИО", "Команда", "Направление", "Не сдал(-а)", "Оценка", "Баллы", "Повышение оценки"]
         # self.DTR_model = LinearDiscriminantAnalysis()
-        self.knn = KNeighborsClassifier(n_neighbors=2)
-        self.catboost = CatBoostRegressor(iterations=200, depth=14, learning_rate=0.01, silent=True, allow_writing_files=False)
+        self.ab = AdaBoostClassifier(base_estimator=LogisticRegression(), learning_rate=2.0, n_estimators=48)
+        self.lr = LinearRegression()
 
     def GetExam(self, prediction, ex):
-        X = self.data[self.data.loc[:,:ex].columns.difference(self._not_for_prediction)]
-        Y = self.data["Сдал(-а)"].to_list()
-        self.knn.fit(X, Y)
+        temp_data = self.data.loc[:,:ex]
+        X = temp_data[temp_data.columns.difference(["Не сдал(-а)"])]
+        Y = self.data["Не сдал(-а)"].to_list()
+        self.ab.fit(X, Y)
         prediction = prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction)]
-        result = self.knn.predict(prediction)
+        # result = self.knn.predict(prediction)
+        class_index = np.where(self.ab.classes_ == 0)
+        result = list(chain(*chain(*self.ab.predict_proba(prediction)[:,class_index])))
+        print(result[:10])
         return result
 
     def GetTest(self, prediction, ex):
-        X = np.array(pd.DataFrame(self.data[self.data.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])]))
-        Y = np.array(self.data[ex])
-        self.catboost.fit(X, Y)
-        data_prediction = self.LinearRegression.predict(prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])])
+        temp_data = self.data.loc[:,:ex]
+        X = temp_data[temp_data.columns.difference(["Не сдал(-а)", ex])]
+        Y = self.data[ex].to_list()
+        self.lr.fit(X, Y)
+        data_prediction = self.lr.predict(prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])])
         # data_prediction = [y_train_original[list(y_train).index(i)] for i in data_prediction]
         # print(accuracy_score(data_prediction, y_test))  
         return data_prediction
-        self.DTR_model.fit(X, Y)
-        result = self.SVC_DTR_modelmodel.predict(prediction)
-        return result
 
 

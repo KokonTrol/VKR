@@ -1,7 +1,7 @@
 function MakeRowResultExam(valueFio, valueRes){
-    var obj = `<tr ${valueRes == 0 ? 'class="table-danger"' : ''}>
+    var obj = `<tr ${valueRes >= 0.5 ? 'class="table-danger"' : ''}>
         <td>${valueFio}</td>
-        <td>${valueRes == 1 ? 'Удачно' : 'Неудачно'}</td>
+        <td>${valueRes}</td>
         </tr>`;
     return obj;
 }
@@ -58,6 +58,7 @@ $(document).ready(function (e){
                 $.each(responseData, function(index, value){
                     $('#tableResultBody').append(MakeRowResultExam(value.name, value.result));
                 });
+                console.log(responseData);
                 responseData = null;
             }
         }

@@ -4,7 +4,7 @@ from flask_login import LoginManager, login_required, login_user, current_user, 
 
 from models import *
 from getTableBD import _FillDataEducation as _FillDataEducation
-from prediction import Education
+from prediction import PredictClass
 from convertData import Convert as ConvertLoadedData
 import pandas as pd
 import io
@@ -117,11 +117,11 @@ def _getStatusCodeData(request):
             education = None
             if subject not in dataEducation.keys():
                 testsCount = len(list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns))
-                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-3)/3==float(testsCount)] #делать -3, если будет команда снова
+                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-2)/4==float(testsCount)]
                 education = pd.concat(concatData, axis=0)
             else:
                 education = dataEducation[subject]
-            educationed = Education(education)
+            educationed = PredictClass(education)
             resp = jsonify({})
             resp.status_code = 200
             return resp, educationed, data, test

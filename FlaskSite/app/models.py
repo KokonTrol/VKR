@@ -20,27 +20,26 @@ class Admin(db.Model, UserMixin):
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    results = db.relationship("Results", back_populates="subject")
 
 class Results(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    succes_done = db.Column(db.Boolean, default=False)
+    not_succes_done = db.Column(db.Boolean, default=False)
     score = db.Column(db.Float, default=0.0)
-    comands_id = db.Column(db.Integer, db.ForeignKey('comands.id'), nullable=False)
-    comands = db.relationship('Comands', backref=db.backref('results', lazy=True))
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-    subject = db.relationship('Subject', backref=db.backref('results', lazy=True))
-    gender = db.Column(db.Boolean, nullable=False, default=False)
+    # subject = db.relationship('Subject', backref=db.backref('results', lazy=True, cascade="all"))
+    subject = db.relationship("Subject", back_populates="results", cascade="all")
+    gender = db.Column(db.Integer, nullable=False, default=0)
+    scores = db.relationship("Scores", back_populates="result")
 
-class Comands(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
 
 class Scores(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     result_id = db.Column(db.Integer, db.ForeignKey('results.id'), nullable=False)
-    result = db.relationship('Results', backref=db.backref('scores', lazy=True))
-    
+    # result = db.relationship('Results', backref=db.backref('scores', lazy=True, cascade="all"))
+    result = db.relationship("Results", back_populates="scores", cascade="all")
     visiting = db.Column(db.Float, default=0.0)
     scores_before = db.Column(db.Float, default=0.0)
+    scores_before_percent = db.Column(db.Float, default=0.0)
     scores_test = db.Column(db.Float, default=0.0)
     test_number = db.Column(db.Integer, nullable=False)
