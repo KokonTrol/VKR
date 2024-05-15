@@ -2,19 +2,21 @@ exams = []
 scores = []
 being = []
 before = []
+countscores = []
 
 def FillColumnsList(data):
-    global before, being, scores, exams
+    global before, being, scores, exams, countscores
     exams = [name  for name in data.columns.to_list() if name.startswith("Контрольная")]
     scores = [name  for name in data.columns.to_list() if name.startswith("Баллы ")]
     being = [name  for name in data.columns.to_list() if name.startswith("Посещение ")]
     before = [name  for name in data.columns.to_list() if name.startswith("Процент ")]
+    countscores = [name  for name in data.columns.to_list() if name.startswith("Количество ")]
 
 def MakeFloat(data, addition_list_columns):
     if len(exams) == 0:
         FillColumnsList(data)
     convert_dict = {}
-    for i, lst in enumerate([exams, scores, being, before]):
+    for i, lst in enumerate([exams, scores, being, before, countscores]):
         for name in lst:
             convert_dict[name] = float
     for column in addition_list_columns:
@@ -56,7 +58,7 @@ def DrawPlots(data):
         plt.legend(prop={'size': 11})
         plt.tight_layout()
         plt.show()
-    display(data[exams+scores+being+before].boxplot(vert=False))
+    display(data[exams+scores+being+before+countscores].boxplot(vert=False))
 
 import scipy.stats as stats
 def DeleteByQuantile(data, q1 = 0.15):
