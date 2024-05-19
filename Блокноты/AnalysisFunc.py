@@ -3,20 +3,28 @@ scores = []
 being = []
 before = []
 countscores = []
+sqrt_vars = []
+
+def GetAllColumnsTests(data):
+    if len(exams) == 0:
+        FillColumnsList(data)
+    return exams + scores + being + before + countscores + sqrt_vars
 
 def FillColumnsList(data):
-    global before, being, scores, exams, countscores
+    global before, being, scores, exams, countscores, sqrt_vars
     exams = [name  for name in data.columns.to_list() if name.startswith("Контрольная")]
     scores = [name  for name in data.columns.to_list() if name.startswith("Баллы ")]
     being = [name  for name in data.columns.to_list() if name.startswith("Посещение ")]
     before = [name  for name in data.columns.to_list() if name.startswith("Процент ")]
     countscores = [name  for name in data.columns.to_list() if name.startswith("Количество ")]
+    sqrt_vars = [name  for name in data.columns.to_list() if name.startswith("Корень ")]
 
 def MakeFloat(data, addition_list_columns):
+    global before, being, scores, exams, countscores, sqrt_vars
     if len(exams) == 0:
         FillColumnsList(data)
     convert_dict = {}
-    for i, lst in enumerate([exams, scores, being, before, countscores]):
+    for i, lst in enumerate([exams, scores, being, before, countscores, sqrt_vars]):
         for name in lst:
             convert_dict[name] = float
     for column in addition_list_columns:
