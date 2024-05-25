@@ -94,3 +94,14 @@ def DeleteByZ(data):
         max_score = data_Z[f"Баллы до {meeting_name}"].div(0.01).max()
         data_Z[f"Процент баллов до {meeting_name}"] = data_Z[f"Процент баллов до {meeting_name}"].div(max_score*1.0).round(2)
     return data_Z
+
+from sklearn.preprocessing import MinMaxScaler
+def MinMaxColumns(data, columns: list):
+    scaler = MinMaxScaler()
+    return scaler.fit_transform(data[columns])
+
+def SplitAlreadyPassed(data, ex):
+    global scores, exams
+    ex_ind = exams.index(ex) + 1
+    passed = data[(data[exams[:ex_ind]].sum(axis=1) * 20 + data[scores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
+    return data.drop(passed.index, axis=0), passed
