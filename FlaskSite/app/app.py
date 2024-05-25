@@ -14,6 +14,9 @@ from env import *
 
 app = Flask(__name__)
 dataEducation = {}
+
+users_tables = {}
+
 _isFirstRun = True
 ALLOWED_EXTENSIONS = {'xls', 'xlsx'}
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8'.format(username=DBUSER,
@@ -73,13 +76,18 @@ def logout():
     logout_user()
     return redirect(url_for('admin_login'))
 
+def UserTableExist(uuid: str, data):
+    global users_tables
+    print(uuid)
+    if uuid not in users_tables.keys():
+        users_tables[uuid] = ConvertLoadedData(data)
 
 @app.route('/api/get_tests/', methods = ['post'])
 def getTestsNames():
     select = request.form.get("selectedSubject")
     if select and select in dataEducation.keys():
         resp = jsonify(
-            list(dataEducation[select][dataEducation[select].columns[pd.Series(dataEducation[select].columns).str.startswith('Контрольная ')]].columns)
+            [name  for name in dataEducation[select]["original_data"].columns.to_list() if name.startswith("Контрольная")]
         )
         resp.status_code = 200
         return resp
@@ -91,11 +99,12 @@ def getTestsNames():
     else:
         file = request.files.get("formFile")
         if file and allowed_file(file.filename):
-            data = ConvertLoadedData(io.BytesIO(file.read()), True)
-            tests = list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns)
+            uuid = request.form.get("uuid")
+            UserTableExist(uuid, io.BytesIO(file.read()))
+            tests = [name  for name in users_tables[uuid].columns.to_list() if name.startswith("Контрольная")]
             resp = jsonify(tests)
             resp.status_code = 200
-            del tests, data, select
+            del tests, select
             return resp
         else:
             resp = jsonify({"message": "Неправильный вид файла"})
@@ -113,18 +122,18 @@ def _getStatusCodeData(request):
         file = request.files.get("formFile")
 
         if file and allowed_file(file.filename):
-            data = ConvertLoadedData(io.BytesIO(file.read()))
+            uuid = request.form.get("uuid")
+            UserTableExist(uuid, io.BytesIO(file.read()))
             education = None
             if subject not in dataEducation.keys():
-                testsCount = len(list(data[data.columns[pd.Series(data.columns).str.startswith('Контрольная ')]].columns))
-                concatData = [d for index, d in dataEducation.items() if (len(d.columns)-2)/4==float(testsCount)]
-                education = pd.concat(concatData, axis=0)
+                testsCount = len([name  for name in users_tables[uuid].columns.to_list() if name.startswith("Контрольная")])
+                concatData = [d["original_data"] for index, d in dataEducation.items() if (len(d["original_data"].columns)-1)/5==float(testsCount)]
+                education = PredictClass(pd.concat(concatData, axis=0))
             else:
-                education = dataEducation[subject]
-            educationed = PredictClass(education)
+                education = dataEducation[subject]["predicting"]
             resp = jsonify({})
             resp.status_code = 200
-            return resp, educationed, data, test
+            return resp, education, test
         else:
             resp = jsonify({"message": "Неправильный вид файла"})
             resp.status_code = 400
@@ -132,34 +141,39 @@ def _getStatusCodeData(request):
 
 @app.route('/api/get_exam_prediction', methods = ['post'])
 def getExamPrediction():
-    resp, educationed, data, test = _getStatusCodeData(request)
+    uuid = request.form.get("uuid")
+    resp, educationed, test = _getStatusCodeData(request)
     if resp.status_code == 400:
         return resp
     else:
-        res = list(educationed.GetExam(data, test))
-        pairs = [{"name": data["ФИО"][i], "result": res[i]} for i in range(len(res))]
+        print(users_tables[uuid].columns)
+        res = list(educationed.GetExam(users_tables[uuid], test))
+        pairs = [{"name": users_tables[uuid]["ФИО"][i], "result": res[i]} for i in range(len(res))]
         resp = jsonify(pairs)
         resp.status_code = 200
-        del educationed, data, test
+        del educationed, test
         return resp
 
 @app.route('/api/get_test_prediction', methods = ['post'])
 def getTestPrediction():
-    resp, educationed, data, test = _getStatusCodeData(request)
+    uuid = request.form.get("uuid")
+    resp, educationed, test = _getStatusCodeData(request)
     if resp.status_code == 400:
         return resp
     else:
-        res = list(educationed.GetTest(data, test))
+        res = list(educationed.GetTest(users_tables[uuid], test))
         data = data.reset_index(drop=True)
-        pairs = [{"name": data["ФИО"][i], "result": int(res[i])} for i in range(len(res))]
+        pairs = [{"name": users_tables[uuid]["ФИО"][i], "result": int(res[i])} for i in range(len(res))]
         resp = jsonify(pairs)
         resp.status_code = 200
-        del educationed, data, test
+        del educationed, test
         return resp
 
+
+import uuid
 @app.route('/', methods = ['POST', 'GET'])
 def loadData():
-    return render_template('load_page.html', subjects=dataEducation.keys())
+    return render_template('load_page.html', subjects=dataEducation.keys(), uuid = uuid.uuid4())
 
 @app.route('/solo', methods = ['POST', 'GET'])
 def loadDataSolo():

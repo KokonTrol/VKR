@@ -1,45 +1,92 @@
-from sklearn.ensemble import AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.preprocessing import MinMaxScaler
 import warnings
 warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 from itertools import chain
 
+def MakeFloat(data):
+    convert_dict = {}
+    for name in data.columns.difference(["Не сдал(-а)"]):
+        convert_dict[name] = float
+    convert_dict["Не сдал(-а)"] = int
+    return data.astype(convert_dict)
+
+def MinMaxColumns(data, columns: list):
+    scaler = MinMaxScaler()
+    return scaler.fit_transform(data[columns])
+
+def SplitTestTrainTest(data, exam, not_for_prediction):
+    return data[data.loc[:,:exam].columns.difference(not_for_prediction+[exam, "Не сдал(-а)"])], data[exam]
+
+
+def SplitTestTrainPass(data, exam, not_for_prediction):
+    return data[data.loc[:,:exam].columns.difference(["Не сдал(-а)"]+not_for_prediction)], data["Не сдал(-а)"]
+
+
 class PredictClass():
     def __init__(self, _data):
+        self.exams = []
+        self.scores = []
+        self.being = []
+        self.countscores = []
+        self.sqrt_vars = []
+
+        self.data = None
+        
+        self._not_for_prediction = ["ФИО", "Команда", "Команды", "Направление", "Не сдал(-а)", "Оценка", "Баллы", "Повышение оценки"]
+
+        self.models_pass = {}
+        self.models_test = {}
+        
+        self.SetData(_data)
+
+    def ClearData(self, prediction):
+        print(type(prediction), prediction.columns)
+        prediction = MakeFloat(prediction.drop(prediction.columns.difference(["Не сдал(-а)"]+self.exams+self.scores+self.being+self.countscores+self.sqrt_vars), axis=1))
+        print(type(prediction), prediction.columns)
+        prediction[self.countscores+self.sqrt_vars] = MinMaxColumns(prediction, self.countscores+self.sqrt_vars)
+        return prediction
+
+    def SetData(self, _data):
         self.exams = [name  for name in _data.columns.to_list() if name.startswith("Контрольная")]
         self.scores = [name  for name in _data.columns.to_list() if name.startswith("Баллы ")]
-        self.before = [name  for name in _data.columns.to_list() if name.startswith("Процент ")]
         self.being = [name  for name in _data.columns.to_list() if name.startswith("Посещение ")]
-        self.data = _data.drop(_data.columns.difference(["Не сдал(-а)", "Пол"]+self.exams+self.scores+self.being+self.before), axis=1)
-        convert_dict = {name: float for name in self.being+self.scores+self.exams+self.before+["Не сдал(-а)"]}
-        self.data = self.data.astype(convert_dict)
-        self._not_for_prediction = ["ФИО", "Команда", "Направление", "Не сдал(-а)", "Оценка", "Баллы", "Повышение оценки"]
-        # self.DTR_model = LinearDiscriminantAnalysis()
-        self.ab = AdaBoostClassifier(estimator=LogisticRegression(), learning_rate=2.0, n_estimators=48)
-        self.lr = LinearRegression()
+        self.countscores = [name  for name in _data.columns.to_list() if name.startswith("Количество ")]
+        self.sqrt_vars = [name  for name in _data.columns.to_list() if name.startswith("Корень ")]
+
+        print(_data.columns)
+        self.data = self.ClearData(_data)
+
+        self.models_pass = {}
+        self.models_test = {}
+        for ex in self.exams:
+            X, Y = SplitTestTrainPass(self.data, ex, [])
+            ab = LogisticRegression()
+            self.models_pass[ex] = ab.fit(X, Y)
+
+            X, Y = SplitTestTrainTest(self.data, ex, [])
+            lr = LinearRegression()
+            self.models_test[ex] = lr.fit(X, Y)
 
     def GetExam(self, prediction, ex):
-        temp_data = self.data.loc[:,:ex]
-        X = temp_data[temp_data.columns.difference(["Не сдал(-а)"])]
-        Y = self.data["Не сдал(-а)"].to_list()
-        self.ab.fit(X, Y)
-        prediction = prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction)]
-        # result = self.knn.predict(prediction)
-        class_index = np.where(self.ab.classes_ == 0)
-        result = list(chain(*chain(*self.ab.predict_proba(prediction)[:,class_index])))
-        print(result[:10])
+        x_, _ = SplitTestTrainPass(self.ClearData(prediction), ex, [])
+        class_index = np.where(self.models_pass[ex].classes_ == 1)
+        result = self.models_pass[ex].predict_proba(x_)
+        result = list(chain(*chain(*result[:,class_index])))
         return result
 
     def GetTest(self, prediction, ex):
-        temp_data = self.data.loc[:,:ex]
-        X = temp_data[temp_data.columns.difference(["Не сдал(-а)", ex])]
-        Y = self.data[ex].to_list()
-        self.lr.fit(X, Y)
-        data_prediction = self.lr.predict(prediction[prediction.loc[:,:ex].columns.difference(self._not_for_prediction+[ex])])
-        # data_prediction = [y_train_original[list(y_train).index(i)] for i in data_prediction]
-        # print(accuracy_score(data_prediction, y_test))  
-        return data_prediction
+        x_, _ = SplitTestTrainTest(self.ClearData(prediction), ex, [])
+        result = self.models_test[ex].predict(x_)
+        return result
+    
+    def SplitAlreadyPassed(self, data, ex):
+        ex_ind = self.exams.index(ex) + 1
+        passed = data[(data[self.exams[:ex_ind]].sum(axis=1) * 20 + data[self.scores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
+        return data.drop(passed.index, axis=0), passed
+    
+
 
 

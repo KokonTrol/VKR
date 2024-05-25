@@ -1,3 +1,5 @@
+let uuid = "";
+
 function MakeRowResultExam(valueFio, valueRes){
     var obj = `<tr ${valueRes >= 0.5 ? 'class="table-danger"' : ''}>
         <td>${valueFio}</td>
@@ -44,11 +46,14 @@ function CollectDataToSend(){
         form_data.append("selectedSubject", $('select[name="selectSubject"]').val());
         form_data.append("selectedTest", $('select[name="selectTest"]').val());
         form_data.append("formFile", $('#formFileInput').prop('files')[0]);
+        form_data.append("uuid", uuid);
         return form_data;
     }
 }
 
 $(document).ready(function (e){
+    uuid = $('#uuid').text();
+    console.log(uuid);
     $('#examPredictionButton').on('click', async function() {
         var data = CollectDataToSend();
         if (data != null) {

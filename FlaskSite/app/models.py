@@ -25,11 +25,9 @@ class Subject(db.Model):
 class Results(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     not_succes_done = db.Column(db.Boolean, default=False)
-    score = db.Column(db.Float, default=0.0)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
     # subject = db.relationship('Subject', backref=db.backref('results', lazy=True, cascade="all"))
     subject = db.relationship("Subject", back_populates="results", cascade="all")
-    gender = db.Column(db.Integer, nullable=False, default=0)
     scores = db.relationship("Scores", back_populates="result")
 
 
@@ -40,6 +38,7 @@ class Scores(db.Model):
     result = db.relationship("Results", back_populates="scores", cascade="all")
     visiting = db.Column(db.Float, default=0.0)
     scores_before = db.Column(db.Float, default=0.0)
-    scores_before_percent = db.Column(db.Float, default=0.0)
+    scores_count = db.Column(db.Float, default=0.0)
+    sqrt_var = db.Column(db.Float, default=0.0)
     scores_test = db.Column(db.Float, default=0.0)
     test_number = db.Column(db.Integer, nullable=False)
