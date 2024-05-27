@@ -4,7 +4,7 @@ from flask_login import LoginManager, login_required, login_user, current_user, 
 
 from models import *
 from getTableBD import _FillDataEducation as _FillDataEducation
-from prediction import PredictClass
+from prediction import PredictClass, GetListGroup
 from convertData import Convert as ConvertLoadedData
 import pandas as pd
 import io
@@ -148,7 +148,8 @@ def getExamPrediction():
     else:
         print(users_tables[uuid].columns)
         res = list(educationed.GetExam(users_tables[uuid], test))
-        pairs = [{"name": users_tables[uuid]["ФИО"][i], "result": res[i]} for i in range(len(res))]
+        groups = GetListGroup(users_tables[uuid])[0]
+        pairs = [{"name": users_tables[uuid]["ФИО"][i],"group": groups[i], "result": round(res[i]*100, 2)} for i in range(len(res))]
         resp = jsonify(pairs)
         resp.status_code = 200
         del educationed, test
@@ -162,8 +163,8 @@ def getTestPrediction():
         return resp
     else:
         res = list(educationed.GetTest(users_tables[uuid], test))
-        data = data.reset_index(drop=True)
-        pairs = [{"name": users_tables[uuid]["ФИО"][i], "result": int(res[i])} for i in range(len(res))]
+        groups = GetListGroup(users_tables[uuid])[0]
+        pairs = [{"name": users_tables[uuid]["ФИО"][i],"group": groups[i], "result": res[i]} for i in range(len(res))]
         resp = jsonify(pairs)
         resp.status_code = 200
         del educationed, test

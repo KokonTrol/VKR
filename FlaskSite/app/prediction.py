@@ -5,6 +5,9 @@ warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 from itertools import chain
+import re
+group_reg = r"([А-Яа-яA-Za-z]+ П-[^,\n]+)"
+
 
 def MakeFloat(data):
     convert_dict = {}
@@ -24,6 +27,8 @@ def SplitTestTrainTest(data, exam, not_for_prediction):
 def SplitTestTrainPass(data, exam, not_for_prediction):
     return data[data.loc[:,:exam].columns.difference(["Не сдал(-а)"]+not_for_prediction)], data["Не сдал(-а)"]
 
+def GetListGroup(data):
+    return data["Команда"].str.extract("([А-Яа-яA-Za-z]+ П-[^,\n]+)")
 
 class PredictClass():
     def __init__(self, _data):
@@ -56,7 +61,6 @@ class PredictClass():
         self.countscores = [name  for name in _data.columns.to_list() if name.startswith("Количество ")]
         self.sqrt_vars = [name  for name in _data.columns.to_list() if name.startswith("Корень ")]
 
-        print(_data.columns)
         self.data = self.ClearData(_data)
 
         self.models_pass = {}
@@ -79,7 +83,7 @@ class PredictClass():
 
     def GetTest(self, prediction, ex):
         x_, _ = SplitTestTrainTest(self.ClearData(prediction), ex, [])
-        result = self.models_test[ex].predict(x_)
+        result = self.models_test[ex].predict(x_).round(1)
         return result
     
     def SplitAlreadyPassed(self, data, ex):

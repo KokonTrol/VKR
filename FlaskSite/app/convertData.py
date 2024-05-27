@@ -17,7 +17,7 @@ def GetInfoLose(row, score_column):
 def _ConvertEveryRow(sheet, one_row = False):
     # имя студента
     temp_row = ""
-    results = pd.DataFrame(columns=["ФИО", "Не сдал(-а)"])
+    results = pd.DataFrame(columns=["ФИО", "Команда", "Не сдал(-а)"])
     for name, group in sheet.groupby(["Название РМУП"]):
         if "Предмет контроля" not in group.columns:
             continue
@@ -45,7 +45,7 @@ def _ConvertEveryRow(sheet, one_row = False):
 
                     temp_row = row["ФИО студента"]
 
-                    results.loc[-1] = [temp_row, GetInfoLose(row, "Итог ТУ")] + [""]*(len(results.columns)-2)
+                    results.loc[-1] = [temp_row, ", ".join(set(group.loc[(group["ФИО студента"] == temp_row), "Команда"])), GetInfoLose(row, "Итог ТУ")] + [""]*(len(results.columns)-3)
                     results.index = results.index + 1  # shifting index
 
                 if ("Контрольная " in row["Название встречи"] or "Контрольная работа" == row["Предмет контроля"]):

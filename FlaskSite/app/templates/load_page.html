@@ -33,11 +33,34 @@
         <button type="submit" id="examPredictionButton" class="btn btn-outline-primary center">Прогнозировать сдачу на основе контрольной</button>
     </div>
     
+    <div class="d-flex flex-column col-9 gap-2 mx-auto gx-3 justify-content-center" style="margin-top: 20px">
+        <button class="btn btn-primary center " type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+            Посмотреть средние показатели по группам
+        </button>
+          <div class="collapse" id="collapseExample">
+                <div>
+                    <canvas id="meanResults"></canvas>
+                </div>
+                <table class="container-sm table table-striped table-hover" id="MeanResultTable">
+                    <thead>
+                        <tr>
+                            <th scope="col">Группа</th>
+                            <th scope="col">Средний показатель</th>
+                        </tr>
+                    </thead>
+                    <tbody id="MeanResultTableBody">
+                    </tbody>
+                </table>
+                
+          </div>
+    </div>
     
-    <table class="table table-striped table-hover">
+    
+    <table class="table table-striped table-hover" id="ResultTable">
 		<thead>
 			<tr>
-				<th scope="col">ФИО</th>
+				<th scope="col-2">ФИО</th>
+                <th scope="col">Группа</th>
 				<th scope="col">Прогноз</th>
 			</tr>
 		</thead>
