@@ -22,8 +22,11 @@ def MinMaxColumns(data, columns: list):
     return scaler.fit_transform(data[columns])
 
 # разделение данных на X и Y, где Y - результаты контрольных
-def SplitTestTrainTest(data, exam, not_for_prediction):
-    return data[data.loc[:,:exam].columns.difference(not_for_prediction+[exam, "Не сдал(-а)"])], data[exam]
+def SplitTestTrainTest(data, exam, not_for_prediction, test_data=False):
+    if test_data:
+        return data[data.loc[data[f"Присутствие на {exam}"] == 1,:exam].columns.difference(not_for_prediction+[exam, "Не сдал(-а)"])], data[exam]
+    else:
+        return data[data.loc[:,:exam].columns.difference(not_for_prediction+[exam, "Не сдал(-а)"])], data[exam]
 
 # разделение данных на X и Y, где Y - результаты сдачи
 def SplitTestTrainPass(data, exam, not_for_prediction):
@@ -42,6 +45,8 @@ class PredictClass():
         self.being = []
         self.countscores = []
         self.sqrt_vars = []
+        self.beingtest = []
+        self.additionscores = []
 
         self.data = None
         
@@ -57,8 +62,9 @@ class PredictClass():
 
     # очистка и преобразование данных
     def ClearData(self, prediction):
-        prediction = MakeFloat(prediction.drop(prediction.columns.difference(["Не сдал(-а)"]+self.exams+self.scores+self.being+self.countscores+self.sqrt_vars), axis=1))
+        prediction = MakeFloat(prediction.drop(prediction.columns.difference(["Не сдал(-а)"]+self.exams+self.scores+self.being+self.countscores+self.sqrt_vars+self.beingtest+self.additionscores), axis=1))
         prediction[self.countscores+self.sqrt_vars] = MinMaxColumns(prediction, self.countscores+self.sqrt_vars)
+        prediction[self.additionscores+self.scores] = prediction[self.additionscores+self.scores].div(100)
         return prediction
 
     # заполнение данных
@@ -68,6 +74,8 @@ class PredictClass():
         self.being = [name  for name in _data.columns.to_list() if name.startswith("Посещение ")]
         self.countscores = [name  for name in _data.columns.to_list() if name.startswith("Количество ")]
         self.sqrt_vars = [name  for name in _data.columns.to_list() if name.startswith("Корень ")]
+        self.additionscores = [name  for name in _data.columns.to_list() if name.startswith("Дополнительные ")]
+        self.beingtest = [name  for name in _data.columns.to_list() if name.startswith("Присутствие ")]
 
         self.data = self.ClearData(_data)
 
@@ -80,7 +88,7 @@ class PredictClass():
             ab = LogisticRegression()
             self.models_pass[ex] = ab.fit(X, Y)
 
-            X, Y = SplitTestTrainTest(self.data, ex, [])
+            X, Y = SplitTestTrainTest(self.data, ex, self.additionscores)
             lr = LinearRegression()
             self.models_test[ex] = lr.fit(X, Y)
 
@@ -96,14 +104,14 @@ class PredictClass():
     # прогнозирование баллов для заданной контрольной
     def GetTest(self, prediction, ex):
         # получение X данных из загруженного DataFrame
-        x_, _ = SplitTestTrainTest(self.ClearData(prediction), ex, [])
+        x_, _ = SplitTestTrainTest(self.ClearData(prediction), ex, self.additionscores)
         result = self.models_test[ex].predict(x_).round(1)
         result[result < 0] = 0
         return result
     
     def SplitAlreadyPassed(self, data, ex):
         ex_ind = self.exams.index(ex) + 1
-        passed = data[(data[self.exams[:ex_ind]].sum(axis=1) * 20 + data[self.scores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
+        passed = data[(data[self.exams[:ex_ind]].sum(axis=1) * 20 + data[self.scores[:ex_ind]].sum(axis=1) * 100 + data[self.additionscores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
         return data.drop(passed.index, axis=0), passed
     
 

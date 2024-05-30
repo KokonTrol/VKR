@@ -3,28 +3,32 @@ scores = []
 being = []
 before = []
 countscores = []
+additionscores = []
+beingtest = []
 sqrt_vars = []
 
 def GetAllColumnsTests(data):
     if len(exams) == 0:
         FillColumnsList(data)
-    return exams + scores + being + before + countscores + sqrt_vars
+    return exams + scores + being + before + countscores + sqrt_vars + additionscores + beingtest
 
 def FillColumnsList(data):
-    global before, being, scores, exams, countscores, sqrt_vars
+    global before, being, scores, exams, countscores, sqrt_vars, beingtest, additionscores
     exams = [name  for name in data.columns.to_list() if name.startswith("Контрольная")]
     scores = [name  for name in data.columns.to_list() if name.startswith("Баллы ")]
     being = [name  for name in data.columns.to_list() if name.startswith("Посещение ")]
     before = [name  for name in data.columns.to_list() if name.startswith("Процент ")]
     countscores = [name  for name in data.columns.to_list() if name.startswith("Количество ")]
     sqrt_vars = [name  for name in data.columns.to_list() if name.startswith("Корень ")]
+    additionscores = [name  for name in data.columns.to_list() if name.startswith("Доставленные ")]
+    beingtest = [name  for name in data.columns.to_list() if name.startswith("Присутствие ")]
 
 def MakeFloat(data, addition_list_columns):
-    global before, being, scores, exams, countscores, sqrt_vars
+    global before, being, scores, exams, countscores, sqrt_vars, beingtest, additionscores
     if len(exams) == 0:
         FillColumnsList(data)
     convert_dict = {}
-    for i, lst in enumerate([exams, scores, being, before, countscores, sqrt_vars]):
+    for i, lst in enumerate([before, being, scores, exams, countscores, sqrt_vars, beingtest, additionscores]):
         for name in lst:
             convert_dict[name] = float
     for column in addition_list_columns:
@@ -103,5 +107,5 @@ def MinMaxColumns(data, columns: list):
 def SplitAlreadyPassed(data, ex):
     global scores, exams
     ex_ind = exams.index(ex) + 1
-    passed = data[(data[exams[:ex_ind]].sum(axis=1) * 20 + data[scores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
+    passed = data[(data[exams[:ex_ind]].sum(axis=1) + data[scores[:ex_ind]].sum(axis=1) * 100 + data[additionscores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
     return data.drop(passed.index, axis=0), passed

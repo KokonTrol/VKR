@@ -5,12 +5,22 @@ import numpy as np
 # определение несдачи по набранных баллам
 def GetInfoLose(row, score_column):
     return 1 if float(row[score_column])<61 else 0
-
+# конвертирование данных от ИОТ
+def GetDataTest(data, ind_pres, ind_score):
+    score = -1
+    if ind_score != -1:
+        score = data.loc[ind_score, "Оценка за предметы контроля"]
+        if not pd.isna(score):
+            score = (float(score) if "." in str(score) else float(str(score).replace(",", ".")))
+    presence = 0
+    if (data.loc[ind_pres, "Оценка за предметы контроля"]=="П"):
+        presence = 1
+    return presence, score
 # конвертация данных в формате от ИОТ (one_row - отметка о необходимости считывания одной итоговой строки)
 def _ConvertEveryRow(sheet, one_row = False):
     # имя студента
     temp_row = ""
-    results = pd.DataFrame(columns=["ФИО", "Команда", "Не сдал(-а)"])
+    results = pd.DataFrame(columns=["Баллы", "ФИО", "Команда", "Не сдал(-а)"])
     for name, group in sheet.groupby(["Название РМУП"]):
         # проверка на наличие данных
         if "Предмет контроля" not in group.columns:
@@ -29,10 +39,18 @@ def _ConvertEveryRow(sheet, one_row = False):
             count_presence = summ_presence = summ_goals_btest = count_goals = count_meetings = 0
             # список баллов
             goals_list = []
+            # индексы для данных контрольной
+            skip = ind_presence = ind_score = 0
             # номер контрольной
             test_number = 1
+            # изменение индексов
+            group.reset_index(inplace = True)
             # количество действий с кр (баллы и результаты до)
             for index, row in group.iterrows ():
+                # пропуск строк после КР
+                if skip > 0:
+                    skip-=1
+                    continue
                 # проверка на смену студента
                 if temp_row == "" or temp_row != row["ФИО студента"]:
                     if one_row and temp_row != "":
@@ -43,7 +61,7 @@ def _ConvertEveryRow(sheet, one_row = False):
                     # сохранение имени студента
                     temp_row = row["ФИО студента"]
                     # заполнение основной информации студента
-                    results.loc[-1] = [temp_row, ", ".join(set(group.loc[(group["ФИО студента"] == temp_row), "Команда"])), GetInfoLose(row, "Итог ТУ")] + [""]*(len(results.columns)-3)
+                    results.loc[-1] = [row["Итог ТУ"], temp_row, ", ".join(set(group.loc[(group["ФИО студента"] == temp_row), "Команда"])), -1] + [""]*(len(results.columns)-4)
                     results.index = results.index + 1 
 
                 # нахождение отметки о контрольной работе
@@ -56,12 +74,58 @@ def _ConvertEveryRow(sheet, one_row = False):
                             results[f"Баллы до {meeting_name}"] = 0.0
                             results[f"Количество баллов до {meeting_name}"] = 0.0
                             results[f"Корень дисперсии баллов до {meeting_name}"] = 0.0
-                        results[meeting_name] = 0.0
+                            results[f"Доставленные баллы на {meeting_name}"] = -1
+                            results[meeting_name] = 0
+                            results[f"Присутствие на {meeting_name}"] = 0.0
                     # если найдены баллы контрольной
                     if (row["Предмет контроля"] == name_column_test):
 
                         test_score = float(row["Оценка за предметы контроля"]) if row["Оценка за предметы контроля"]!="" else 0
                         results.loc[((results['ФИО'] == temp_row)), f"Контрольная работа {test_number}"] = test_score
+
+                        # определение посещамесоти КР и дополнительных баллов
+                        if "Контрольная работа" == row["Предмет контроля"]:
+                            if  group.loc[index + 1, "Название встречи"] != row["Название встречи"]:
+                                if group.loc[index - 1, "Предмет контроля"] == "Посещение":
+                                    ind_presence = index - 1
+                                    ind_score = index - 2
+                                else:
+                                    ind_presence = index - 2
+                                    ind_score = index - 1
+                            elif group.loc[index + 2, "Название встречи"] != row["Название встречи"]:
+                                skip = 1
+                                if group.loc[index + 1, "Предмет контроля"] == "Посещение":
+                                    ind_presence = index + 1
+                                    ind_score = index - 1
+                                else:
+                                    ind_presence = index - 1
+                                    ind_score = index + 1
+                            else:
+                                skip = 2
+                                if group.loc[index + 2, "Предмет контроля"] == "Посещение":
+                                    ind_presence = index + 2
+                                    ind_score = index + 1
+                                else:
+                                    ind_presence = index + 1
+                                    ind_score = index + 2
+                        else:
+                            if group.loc[index + 1, "Название встречи"] != row["Название встречи"]:
+                                ind_presence, ind_score = index - 1, -1
+                            else:
+                                skip = 1
+                                ind_presence, ind_score = index + 1, -1
+
+                        test_presence, addit_score = GetDataTest(group, ind_presence, ind_score)
+                        if ind_presence < index:
+                            count_presence -= 1
+                            summ_presence -= test_presence
+                        if ind_score < index:
+                            if addit_score>0:
+                                summ_goals_btest -= addit_score
+                                # вычитание доп баллов
+                                results.loc[((results['ФИО'] == temp_row)), "Баллы"] -= addit_score
+                                count_goals -= 1
+                                goals_list.pop()
 
                         if count_presence == 0:
                             continue
@@ -70,6 +134,9 @@ def _ConvertEveryRow(sheet, one_row = False):
                         results.loc[((results['ФИО'] == temp_row)), f"Баллы до {meeting_name}"] = summ_goals_btest
                         results.loc[((results['ФИО'] == temp_row)), f"Количество баллов до {meeting_name}"] = count_goals
                         results.loc[((results['ФИО'] == temp_row)), f"Корень дисперсии баллов до {meeting_name}"] = sqrt(np.var(goals_list))
+                        results.loc[((results['ФИО'] == temp_row)), f"Доставленные баллы на {meeting_name}"] = addit_score
+                        results.loc[((results['ФИО'] == temp_row)), f"Присутствие на {meeting_name}"] = test_presence
+
                         # обнуление счетчиков
                         count_presence = summ_presence = summ_goals_btest = count_goals = count_meetings = 0
                         goals_list = []
@@ -93,9 +160,12 @@ def _ConvertEveryRow(sheet, one_row = False):
                         summ_presence += 1
 
             # заполнение пропусков и удаление ложной контрольной
-            results = results.fillna(0)
             results = results.replace("", 0)
-            results = results.drop(results.columns[-5:], axis= 1)
+            results = results.loc[:, (results != 0).any(axis=0)]
+            results = results[results.columns[:len(results.columns)-(len(results.columns)-3)%7]]
+            results = results.replace(-1, 0)
+            results.loc[results["Баллы"]<61.0, 'Не сдал(-а)'] = 1
+            results.drop(["Баллы"], axis= 1, inplace=True)
             break
         except Exception as e:
             print(e)
@@ -108,14 +178,14 @@ def _ConvertModeusType(sheet, one_row = False):
     sheet = sheet.reset_index(drop=True)
 
     # создание DataFrame и обнуление счетчиков
-    results = pd.DataFrame(columns=["ФИО", "Команда", "Направление", "Не сдал(-а)"])
+    results = pd.DataFrame(columns=["Баллы", "ФИО", "Команда", "Направление", "Не сдал(-а)"])
     count_presence = summ_presence = count_kontr = 0
     summ_goals_btest = count_goals = count_meetings = 0
 
     try:
         for index, row in sheet.iterrows ():
             # заполнение основной информации о студенте
-            results.loc[-1] = [row["Обучающийся"], row["Учебные команды"], row["Направление подготовки"], GetInfoLose(row, "Итог текущ.")] + [""]*(len(results.columns)-4)
+            results.loc[-1] = [row["Обучающийся"], row["Учебные команды"], row["Направление подготовки"], 0] + [""]*(len(results.columns)-4)
             results.index = results.index + 1
 
             # обнуление счетчиков
@@ -151,7 +221,17 @@ def _ConvertModeusType(sheet, one_row = False):
                         results[f"Баллы до {meeting_name}"] = 0
                         results[f"Количество баллов до {meeting_name}"] = 0.0
                         results[f"Корень дисперсии баллов до {meeting_name}"] = 0.0
+                        results[f"Доставленные баллы на {meeting_name}"] = 0.0
                         results[meeting_name] = 0
+                        results[f"Присутствие на {meeting_name}"] = 0.0
+                    
+                    # определение присутствия на КР
+                    count_presence -= 1
+                    if (row[i-1]=="П"):
+                        summ_presence-=1
+                        results.loc[results.index[-1], f"Присутствие на {meeting_name}"] = 1
+                    else:
+                        results.loc[results.index[-1], f"Присутствие на {meeting_name}"] = 0
                     # запись посчитанных данных
                     results.loc[results.index[-1], f"Посещение до {meeting_name}"] = round(summ_presence / float(count_presence), 2)
                     results.loc[results.index[-1], f"Баллы до {meeting_name}"] = summ_goals_btest
@@ -161,12 +241,20 @@ def _ConvertModeusType(sheet, one_row = False):
 
                     test_score = float(row[i]) if row[i]!="" else 0
                     results.loc[results.index[-1], meeting_name]  = test_score
+                    # определение доставленных баллов
+                    if sheet.columns[i+1]=="Работа на учебной встрече":
+                        if not pd.isna(row[i+1]):
+                            results.loc[results.index[-1],f"Доставленные баллы на {meeting_name}"] = (float(row[i+1]) if "." in str(row[i]) else float(str(row[i+1]).replace(",", ".")))
+                            results.loc[results.index[-1], "Баллы"] -= results.loc[results.index[-1],f"Доставленные баллы на {meeting_name}"]
+                            i+=1
                     # обнуление счетчиков
                     count_presence = summ_presence = summ_goals_btest = count_goals = 0
             if one_row:
                 break
         # заполнение пропусков
         results = results.fillna(0)
+        results.loc[results["Баллы"]<61.0, 'Не сдал(-а)'] = 1
+        results.drop(["Баллы"], axis= 1, inplace=True)
     except Exception as e:
             print(e)
     return results
