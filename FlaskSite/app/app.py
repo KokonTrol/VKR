@@ -46,14 +46,14 @@ def beforeRequest():
 @app.route('/admin_panel', methods = ['get', 'post'])
 @login_required
 def admin_panel():
+    if request.method == "POST":
+        pass
     return render_template('admin_panel.html', subjects=dataEducation.keys())
 
 @app.route('/admin_login', methods = ['get', 'post'])
 def admin_login():
     msg = []
     if request.method == "POST":
-        print(request.form.get('login'))
-        print(request.form.get('password'))
         user = db.session.query(Admin).filter(Admin.username == request.form.get('login')).first()
         if len(request.form.get('password'))<8:
             msg.append("Длина пароля должна быть больше 8 символов")
