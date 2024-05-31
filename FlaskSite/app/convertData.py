@@ -191,9 +191,13 @@ def _ConvertModeusType(sheet, one_row = False):
             # обнуление счетчиков
             count_presence = summ_presence = count_kontr = 0
             summ_goals_btest = count_goals = count_meetings = 0
-
+            skip = 0
             goals_list = []
             for i in range(5, len(sheet.columns.to_list())):
+                if skip>0:
+                    skip-=1
+                    continue
+                
                 if sheet.columns.to_list()[i]!="Контрольная работа":
                     # подсчет посещаемости
                     if sheet.columns[i]=="Присутствие":
@@ -246,7 +250,7 @@ def _ConvertModeusType(sheet, one_row = False):
                         if not pd.isna(row[i+1]):
                             results.loc[results.index[-1],f"Доставленные баллы на {meeting_name}"] = (float(row[i+1]) if "." in str(row[i]) else float(str(row[i+1]).replace(",", ".")))
                             results.loc[results.index[-1], "Баллы"] -= results.loc[results.index[-1],f"Доставленные баллы на {meeting_name}"]
-                            i+=1
+                            skip = 1
                     # обнуление счетчиков
                     count_presence = summ_presence = summ_goals_btest = count_goals = 0
             if one_row:

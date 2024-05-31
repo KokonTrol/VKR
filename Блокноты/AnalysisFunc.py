@@ -56,7 +56,7 @@ import seaborn as sns
 def DrawPlots(data):
     if len(exams) == 0:
         FillColumnsList(data)
-    for i, lst in enumerate([exams, scores, being, before]):
+    for i, lst in enumerate([exams, scores, being, countscores, additionscores]):
         for name in lst:
             # Subset to the airline
             subset = data[name]
@@ -70,7 +70,7 @@ def DrawPlots(data):
         plt.legend(prop={'size': 11})
         plt.tight_layout()
         plt.show()
-    display(data[exams+scores+being+before+countscores].boxplot(vert=False))
+    display(data[exams+scores+being+additionscores+countscores].boxplot(vert=False))
 
 import scipy.stats as stats
 def DeleteByQuantile(data, q1 = 0.15):
