@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block jsConnect %}
+<script src="{{ url_for('static', filename='baseFunctions.js') }}"></script>
 <script src="{{ url_for('static', filename='getTestsList.js') }}"></script>
 <script src="{{ url_for('static', filename='getPrediction.js') }}"></script>
 {% endblock %}

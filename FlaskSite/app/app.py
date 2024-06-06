@@ -3,12 +3,14 @@ from flask_migrate import Migrate
 from flask_login import LoginManager, login_required, login_user, current_user, logout_user
 
 from models import *
+from addDataToDB import AddDataToDB, GetIfSubjectExist, DeleteSubject
 from getTableBD import _FillDataEducation as _FillDataEducation
 from prediction import PredictClass, GetListGroup
 from convertData import Convert as ConvertLoadedData
 import pandas as pd
 import io
 import random
+import uuid as uuid_generator
 
 from env import *
 
@@ -24,9 +26,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{username}:{password}@{
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SECRET_KEY'] = SECRETKEY
 db.init_app(app)
+with app.app_context() as ctx:
+    ctx.push()
+    db.create_all()
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'admin_login'
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.query(Admin).get(user_id)
@@ -34,6 +40,7 @@ def load_user(user_id):
 def allowed_file(filename):
    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# обучение моделей перед первой загрузкой страницы
 @app.before_request
 def beforeRequest():
     global _isFirstRun, dataEducation, test_select
@@ -46,9 +53,39 @@ def beforeRequest():
 @app.route('/admin_panel', methods = ['get', 'post'])
 @login_required
 def admin_panel():
+    global _isFirstRun, app, db
     if request.method == "POST":
-        pass
-    return render_template('admin_panel.html', subjects=dataEducation.keys())
+        file = request.files.get("formFile")
+        select = request.form.get("selectedSubject")
+        if select == "Не выбрано":
+            select = request.form.get("subjectInput")
+        if file and allowed_file(file.filename):
+            if AddDataToDB(ConvertLoadedData(io.BytesIO(file.read())), select, app, db):
+                resp = jsonify({"message": "Данные добавлены в базу"})
+                resp.status_code = 200
+                _isFirstRun = True
+                return resp
+        resp = jsonify({"message": "Неправильный вид файла или другие данные"})
+        resp.status_code = 400
+        return resp
+    return render_template('admin_panel.html', subjects=dataEducation.keys(), uuid = uuid_generator.uuid4())
+@app.route('/admin_panel_delete', methods = ['post'])
+@login_required
+def admin_panel_delete():
+    global _isFirstRun, dataEducation, db
+    if request.method == "POST":
+        select = GetIfSubjectExist(request.form.get("selectedSubject"), db)
+        if select==None:
+            resp = jsonify({"message": "Дисциплина не найдена"})
+            resp.status_code = 400
+            return resp
+        DeleteSubject(select, db)
+        del dataEducation[request.form.get("selectedSubject")]
+        
+        resp = jsonify({"message": "Дисциплина удалена"})
+        resp.status_code = 200
+        _isFirstRun = True
+        return resp
 
 @app.route('/admin_login', methods = ['get', 'post'])
 def admin_login():
@@ -78,9 +115,8 @@ def logout():
 
 def UserTableExist(uuid: str, data):
     global users_tables
-    print(uuid)
     if uuid not in users_tables.keys():
-        users_tables[uuid] = ConvertLoadedData(data)
+        users_tables[uuid] = ConvertLoadedData(data).sort_index()
 
 @app.route('/api/get_tests/', methods = ['post'])
 def getTestsNames():
@@ -128,6 +164,10 @@ def _getStatusCodeData(request):
             if subject not in dataEducation.keys():
                 testsCount = len([name  for name in users_tables[uuid].columns.to_list() if name.startswith("Контрольная")])
                 concatData = [d["original_data"] for index, d in dataEducation.items() if (len(d["original_data"].columns)-1)/5==float(testsCount)]
+                if len(concatData) == 0:
+                    resp = jsonify({"message": "Нет доступных данных для контрольной"})
+                    resp.status_code = 400
+                    return resp, None, None, None
                 education = PredictClass(pd.concat(concatData, axis=0))
             else:
                 education = dataEducation[subject]["predicting"]
@@ -139,17 +179,24 @@ def _getStatusCodeData(request):
             resp.status_code = 400
             return resp, None, None, None
 
+# создание JSON-ответа со списком результатов
+def MakePairsForResultsPrediction(results, uuid):
+    global users_tables
+    groups = GetListGroup(users_tables[uuid])[0]
+    pairs = [{"name": users_tables[uuid]["ФИО"][i],"group": groups[i], "result": results[i]} for i in range(len(results))]
+    return sorted(pairs, key=lambda d: d["name"])
+        
+
 @app.route('/api/get_exam_prediction', methods = ['post'])
 def getExamPrediction():
+    global users_tables
     uuid = request.form.get("uuid")
     resp, educationed, test = _getStatusCodeData(request)
     if resp.status_code == 400:
         return resp
     else:
-        print(users_tables[uuid].columns)
         res = list(educationed.GetExam(users_tables[uuid], test))
-        groups = GetListGroup(users_tables[uuid])[0]
-        pairs = [{"name": users_tables[uuid]["ФИО"][i],"group": groups[i], "result": round(res[i]*100, 2)} for i in range(len(res))]
+        pairs = MakePairsForResultsPrediction(res, uuid)
         resp = jsonify(pairs)
         resp.status_code = 200
         del educationed, test
@@ -157,28 +204,27 @@ def getExamPrediction():
 
 @app.route('/api/get_test_prediction', methods = ['post'])
 def getTestPrediction():
+    global users_tables
+
     uuid = request.form.get("uuid")
     resp, educationed, test = _getStatusCodeData(request)
     if resp.status_code == 400:
         return resp
     else:
         res = list(educationed.GetTest(users_tables[uuid], test))
-        groups = GetListGroup(users_tables[uuid])[0]
-        pairs = [{"name": users_tables[uuid]["ФИО"][i],"group": groups[i], "result": res[i]} for i in range(len(res))]
+        pairs = MakePairsForResultsPrediction(res, uuid)
         resp = jsonify(pairs)
         resp.status_code = 200
         del educationed, test
         return resp
 
-
-import uuid
 @app.route('/', methods = ['POST', 'GET'])
 def loadData():
-    return render_template('load_page.html', subjects=dataEducation.keys(), uuid = uuid.uuid4())
+    return render_template('load_page.html', subjects=dataEducation.keys(), uuid = uuid_generator.uuid4())
 
 @app.route('/solo', methods = ['POST', 'GET'])
 def loadDataSolo():
-    return render_template('solo_page.html', subjects=dataEducation.keys())
+    return render_template('solo_page.html', subjects=dataEducation.keys(), uuid = uuid_generator.uuid4())
 
 if __name__ == '__main__':
 	app.run(debug=True, port=8000)

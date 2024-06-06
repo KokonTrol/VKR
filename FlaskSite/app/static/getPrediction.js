@@ -1,6 +1,4 @@
-let uuid = "";
-var myChart = null;
-
+let myChart = null;
 function MakeRowResultExam(valueFio, valueGroup, valueRes){
     var obj = `<tr ${valueRes >= 50 ? 'class="table-danger"' : ''}>
         <td>${valueFio}</td>
@@ -18,25 +16,7 @@ function MakeRowResultTest(valueFio, valueGroup, valueRes){
         </tr>`;
     return obj;
 }
-let responseData;
-async function GetResult(url, formdata){
-    await $.ajax({
-        url: url,
-        type: 'POST',
-        dataType: 'json',
-        cache: false, 
-        contentType: false,
-        processData: false,
-        data: formdata,
-        success: function(response){
-            responseData =  response;
-        },
-        error: function(response){
-            responseData =  response;
-        },
-    });
-    console.log(responseData);
-}
+
 
 function CollectDataToSend(){
     var form_data = new FormData();
@@ -57,7 +37,7 @@ function CollectDataToSend(){
 function DrawChart(data){
     var groupedData = {};
 
-    // Группируем данные по параметру param1
+    // Группируем данные по параметру
     for (var i = 0; i < data.length; i++) {
         var item = data[i];
         if (!groupedData[item.group]) {
@@ -96,13 +76,6 @@ function DrawChart(data){
         options: {
             indexAxis: 'y',
           scales: {
-            // x: {
-            //     ticks: {
-            //         autoSkip: false,
-            //         maxRotation: 90,
-            //         minRotation: 90
-            //     }
-            // },
             y: {
               beginAtZero: true
             }
@@ -112,25 +85,28 @@ function DrawChart(data){
 }
 
 $(document).ready(function (e){
-    uuid = $('#uuid').text();
+    componentsToDisable = ["#examPredictionButton", "#testPredictionButton", "#selectSubject", "#formFileInput", "#selectSubject"]
     $('#examPredictionButton').on('click', async function() {
+        ChangeDisabled(true);
         var data = CollectDataToSend();
         if (data != null) {
             await GetResult("/api/get_exam_prediction", data);
             if (responseData != null){
                 $('#tableResultBody').empty();
                 $.each(responseData, function(index, value){
-                    $('#tableResultBody').append(MakeRowResultExam(value.name, value.group, value.result));
+                    $('#tableResultBody').append(MakeRowResultExam(value.name, value.group, (value.result*100).toFixed(2)));
                 });
                 DrawChart(responseData);
                 responseData = null;
             }
         }
+        ChangeDisabled(false);
     });
 
     $('#testPredictionButton').on('click', async function() {
+        ChangeDisabled(true);
+
         var data = CollectDataToSend();
-        console.log(data);
         if (data != null) {
             await GetResult("/api/get_test_prediction", data);
             if (responseData != null){
@@ -142,5 +118,6 @@ $(document).ready(function (e){
                 responseData = null;
             }
         }
+        ChangeDisabled(false);
     });
 });

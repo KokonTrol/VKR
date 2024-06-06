@@ -1,9 +1,17 @@
 {% extends 'base.html' %}
 
 {% block jsConnect %}
+<script src="{{ url_for('static', filename='baseFunctions.js') }}"></script>
+<script src="{{ url_for('static', filename='setNewTrainModel.js') }}"></script>
 {% endblock %}
 
 {% block admin_bar %}
+<li class="nav-item text-uppercase fw-bold">
+    {% if current_user %}
+    <a class="nav-link">{{ current_user.username }}</a>    
+        
+    {% endif %}
+</li>
 <li class="nav-item">
     <a class="nav-link" href="/admin_logout">Выйти</a>        
 </li>
@@ -32,7 +40,13 @@
             <input class="form-control" type="text" 
             id = "formSubjectInput"  name="formSubjectInput">
         </div>
+        <div class="mb-3">
+            <label for="formFile" class="form-label">Зарузите файл с обучающими данными</label>
+            <input class="form-control" type="file" 
+            id = "formFileInput"  name="formFile" accept=".xls,.xlsx">
+        </div>
         <button type="submit" id="addEducationdata" class="btn btn-outline-primary center">Добавить данные прогнозирования</button>
+        <button type="submit" id="deleteSubject" class="btn btn-danger center">Удалить дисциплину</button>
     </div>
     
 {% endblock %}

@@ -1,4 +1,5 @@
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression
+from CatBoost import CatBoostRegressor
 from sklearn.preprocessing import MinMaxScaler
 import warnings
 warnings.filterwarnings('ignore')
@@ -49,20 +50,19 @@ class PredictClass():
         self.additionscores = []
 
         self.data = None
-        
         # список колонок, которые не будут учитываться в прогнозе
         self._not_for_prediction = ["ФИО", "Команда", "Команды", "Направление", "Не сдал(-а)","Баллы"]
-
         # словари моделей для каждой из контрольной работы
         self.models_pass = {}
         self.models_test = {}
-        
         # заполнение данных
         self.SetData(_data)
 
     # очистка и преобразование данных
     def ClearData(self, prediction):
-        prediction = MakeFloat(prediction.drop(prediction.columns.difference(["Не сдал(-а)"]+self.exams+self.scores+self.being+self.countscores+self.sqrt_vars+self.beingtest+self.additionscores), axis=1))
+        prediction = MakeFloat(prediction.drop(prediction.columns.difference(["Не сдал(-а)"]+\
+            self.exams+self.scores+self.being+self.countscores+self.sqrt_vars+\
+                self.beingtest+self.additionscores), axis=1))
         prediction[self.countscores+self.sqrt_vars] = MinMaxColumns(prediction, self.countscores+self.sqrt_vars)
         prediction[self.additionscores+self.scores] = prediction[self.additionscores+self.scores].div(100)
         return prediction
@@ -84,34 +84,39 @@ class PredictClass():
 
         # каждой КР соответствует своя модель прогнозирования
         for ex in self.exams:
-            X, Y = SplitTestTrainPass(self.data, ex, [])
+            X, Y = SplitTestTrainPass(self.data, ex, self.beingtest)
             ab = LogisticRegression()
             self.models_pass[ex] = ab.fit(X, Y)
 
-            X, Y = SplitTestTrainTest(self.data, ex, self.additionscores)
-            lr = LinearRegression()
+            X, Y = SplitTestTrainTest(self.data, ex, self.additionscores+self.beingtest, True)
+            lr = CatBoostRegressor(iterations=151, learning_rate=0.05, depth=6, silent=True, allow_writing_files=False)
             self.models_test[ex] = lr.fit(X, Y)
 
     # прогнозирование сдачи по заданной контрольной
     def GetExam(self, prediction, ex):
+        prediction = self.ClearData(prediction)
+        # разделение студентов на уже сдавших и несдавших
+        _, passed = self.SplitAlreadyPassed(prediction, ex)
         # получение X данных из загруженного DataFrame
-        x_, _ = SplitTestTrainPass(self.ClearData(prediction), ex, [])
+        x_, _ = SplitTestTrainPass(prediction, ex, self.beingtest)
         # выделение вероятностей несдачи дисциплины
         class_index = np.where(self.models_pass[ex].classes_ == 1)
         result = self.models_pass[ex].predict_proba(x_)
         result = list(chain(*chain(*result[:,class_index])))
-        return result
+        prediction["result"] = result
+        prediction.loc[passed.index, "result"] = 0
+        return prediction["result"]
     # прогнозирование баллов для заданной контрольной
     def GetTest(self, prediction, ex):
         # получение X данных из загруженного DataFrame
-        x_, _ = SplitTestTrainTest(self.ClearData(prediction), ex, self.additionscores)
-        result = self.models_test[ex].predict(x_).round(1)
+        x_, _ = SplitTestTrainTest(self.ClearData(prediction), ex, self.additionscores+self.beingtest)
+        result = self.models_test[ex].predict(x_).round(0)
         result[result < 0] = 0
         return result
     
     def SplitAlreadyPassed(self, data, ex):
         ex_ind = self.exams.index(ex) + 1
-        passed = data[(data[self.exams[:ex_ind]].sum(axis=1) * 20 + data[self.scores[:ex_ind]].sum(axis=1) * 100 + data[self.additionscores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
+        passed = data[(data[self.exams[:ex_ind]].sum(axis=1) + data[self.scores[:ex_ind]].sum(axis=1) * 100 + data[self.additionscores[:ex_ind]].sum(axis=1) * 100) >= 61.0]
         return data.drop(passed.index, axis=0), passed
     
 

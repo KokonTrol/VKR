@@ -7,7 +7,6 @@ from prediction import PredictClass
 def _FillDataEducation():
     dataEducation = {}
     for sub in [r[0] for r in set(db.session.query(Subject.name).all())]:
-        print(sub)
         od = GetTableFromDBSubjectName(db, sub)
         # каждой дисциплине принадлежит набор данных из БД и объект класса прогнозирования
         dataEducation[sub] = {"original_data": od, "predicting": PredictClass(od)}
@@ -44,6 +43,8 @@ def _makeTable(loaded, scores, maxTestNumber):
         loaded.loc[((loaded['id результата'] == score.result_id)), f"Количество баллов до {meeting_name}"] = score.scores_count
         loaded.loc[((loaded['id результата'] == score.result_id)), f"Корень дисперсии баллов до {meeting_name}"] = score.sqrt_var
         loaded.loc[((loaded['id результата'] == score.result_id)), f"Посещение до {meeting_name}"] = score.visiting
+        loaded.loc[((loaded['id результата'] == score.result_id)), f"Доставленные баллы на {meeting_name}"] = score.additionscores
+        loaded.loc[((loaded['id результата'] == score.result_id)), f"Присутствие на {meeting_name}"] = score.beingtest
         loaded.loc[((loaded['id результата'] == score.result_id)), meeting_name] = score.scores_test
 
     loaded = loaded.drop('id результата', axis=1)
