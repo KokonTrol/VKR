@@ -1,8 +1,8 @@
+// заполнение названий контрольных
 function MakeOptionToSelectTest(value){
     var obj = `<option value="${value}">${value}</option>`;
     return obj;
 }
-
 function SetTests(){
     $('#selectTest').empty();
     $.each(responseData, function(index, value){
@@ -11,11 +11,9 @@ function SetTests(){
 }
 $(document).ready(function (e){
     componentsToDisable = ["#examPredictionButton", "#testPredictionButton", "#formAdditionText", "#formPresText", "#formScoresText", "#selectTest"]
-
+    // действие по смене предмета 
     $('#selectSubject').on('change', async function (e) {
-        
         var form_data = new FormData();
-        console.log($('#formFileInput').length)
         if ($('#formFileInput').length>0){
             var fileCount = $('#formFileInput').prop('files').length;
             if (fileCount!=1){

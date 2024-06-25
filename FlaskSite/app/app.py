@@ -37,6 +37,7 @@ login_manager.login_view = 'admin_login'
 def load_user(user_id):
     return db.session.query(Admin).get(user_id)
 
+# проверка файла на поддерживаемые расширения
 def allowed_file(filename):
    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -50,6 +51,7 @@ def beforeRequest():
         test_select.append("new")
         _isFirstRun = False
 
+# загрузка панели администратора
 @app.route('/admin_panel', methods = ['get', 'post'])
 @login_required
 def admin_panel():
@@ -69,6 +71,7 @@ def admin_panel():
         resp.status_code = 400
         return resp
     return render_template('admin_panel.html', subjects=dataEducation.keys(), uuid = uuid_generator.uuid4())
+# рут дл удаления данных из БД
 @app.route('/admin_panel_delete', methods = ['post'])
 @login_required
 def admin_panel_delete():
@@ -86,7 +89,7 @@ def admin_panel_delete():
         resp.status_code = 200
         _isFirstRun = True
         return resp
-
+# страница входа для администратора
 @app.route('/admin_login', methods = ['get', 'post'])
 def admin_login():
     msg = []
@@ -106,18 +109,19 @@ def admin_login():
         return render_template('admin_login.html', msg = msg)
     else:
         return render_template('admin_login.html', msg = [])
-
+# выход администратора из системы
 @app.route('/admin_logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('admin_login'))
-
+# проверка ранее загруженных данных порльзователя по UUID
 def UserTableExist(uuid: str, data):
     global users_tables
     if uuid not in users_tables.keys():
         users_tables[uuid] = ConvertLoadedData(data).sort_index()
 
+# получение названий контрольных
 @app.route('/api/get_tests/', methods = ['post'])
 def getTestsNames():
     select = request.form.get("selectedSubject")
@@ -146,7 +150,7 @@ def getTestsNames():
             resp = jsonify({"message": "Неправильный вид файла"})
             resp.status_code = 400
             return resp
-
+# общий код для прогнозирований
 def _getStatusCodeData(request):
     test = request.form.get("selectedTest")
     subject = request.form.get("selectedSubject")
@@ -186,7 +190,7 @@ def MakePairsForResultsPrediction(results, uuid):
     pairs = [{"name": users_tables[uuid]["ФИО"][i],"group": groups[i], "result": results[i]} for i in range(len(results))]
     return sorted(pairs, key=lambda d: d["name"])
         
-
+# рут для получения результатов сдачи
 @app.route('/api/get_exam_prediction', methods = ['post'])
 def getExamPrediction():
     global users_tables
@@ -202,6 +206,7 @@ def getExamPrediction():
         del educationed, test
         return resp
 
+# рут для получения результатов контрольной
 @app.route('/api/get_test_prediction', methods = ['post'])
 def getTestPrediction():
     global users_tables
@@ -217,16 +222,16 @@ def getTestPrediction():
         resp.status_code = 200
         del educationed, test
         return resp
-
+# рут загрузки страницы преподавателя
 @app.route('/', methods = ['POST', 'GET'])
 def loadData():
     return render_template('load_page.html', subjects=dataEducation.keys(), uuid = uuid_generator.uuid4())
-
+# рут загрузки страницы студента
 @app.route('/solo', methods = ['POST', 'GET'])
 def loadDataSolo():
     return render_template('solo_page.html', subjects=dataEducation.keys(), uuid = uuid_generator.uuid4())
 
 if __name__ == '__main__':
-	app.run(debug=True, port=8000)
+	app.run(debug=False, port=8000)
 
 

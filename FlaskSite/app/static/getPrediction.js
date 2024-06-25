@@ -1,4 +1,5 @@
 let myChart = null;
+// заполнение таблицы результатами сдачи
 function MakeRowResultExam(valueFio, valueGroup, valueRes){
     var obj = `<tr ${valueRes >= 50 ? 'class="table-danger"' : ''}>
         <td>${valueFio}</td>
@@ -7,7 +8,7 @@ function MakeRowResultExam(valueFio, valueGroup, valueRes){
         </tr>`;
     return obj;
 }
-
+// заполнение таблицы результатами контрольных
 function MakeRowResultTest(valueFio, valueGroup, valueRes){
     var obj = `<tr ${valueRes == 0.0 ? 'class="table-danger"' : ''}>
         <td>${valueFio}</td>
@@ -16,8 +17,7 @@ function MakeRowResultTest(valueFio, valueGroup, valueRes){
         </tr>`;
     return obj;
 }
-
-
+// сборка заполенных данных
 function CollectDataToSend(){
     var form_data = new FormData();
     var fileCount = $('#formFileInput').prop('files').length;
@@ -33,11 +33,10 @@ function CollectDataToSend(){
         return form_data;
     }
 }
-
+// отрисовка графика
 function DrawChart(data){
     var groupedData = {};
-
-    // Группируем данные по параметру
+    // группировкам данных по параметру
     for (var i = 0; i < data.length; i++) {
         var item = data[i];
         if (!groupedData[item.group]) {
@@ -48,7 +47,7 @@ function DrawChart(data){
     }
     $('#MeanResultTableBody').empty();
 
-    // Выводим среднее значение другого параметра для каждого параметра
+    // среднее значение другого параметра для каждого параметра
     for (var key in groupedData) {
         groupedData[key] = (groupedData[key].sum / groupedData[key].count).toFixed(2);
         var obj = `<tr>
@@ -58,11 +57,12 @@ function DrawChart(data){
         $('#MeanResultTableBody').append(obj);
     }
     $('#meanResults').empty();
-
+    // очистка графика
     if(myChart){
         myChart.clear();
         myChart.destroy();
     }
+    // отрисовка графика
     myChart = new Chart($('#meanResults'), {
         type: 'bar',
         data: {
@@ -86,6 +86,7 @@ function DrawChart(data){
 
 $(document).ready(function (e){
     componentsToDisable = ["#examPredictionButton", "#testPredictionButton", "#selectSubject", "#formFileInput", "#selectSubject"]
+    // действие по нажатию кнопки прогнозирования сдачи
     $('#examPredictionButton').on('click', async function() {
         ChangeDisabled(true);
         var data = CollectDataToSend();
@@ -102,7 +103,7 @@ $(document).ready(function (e){
         }
         ChangeDisabled(false);
     });
-
+    // действие по нажатию кнопки прогнозирования контрольной
     $('#testPredictionButton').on('click', async function() {
         ChangeDisabled(true);
 

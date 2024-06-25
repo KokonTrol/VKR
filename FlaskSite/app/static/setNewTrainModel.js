@@ -1,3 +1,4 @@
+// сборка данных для отправки
 function CollectDataToSend(){
     var form_data = new FormData();
     var fileCount = $('#formFileInput').prop('files').length;
@@ -16,6 +17,7 @@ function CollectDataToSend(){
 $(document).ready(function (e){
     $("#deleteSubject").prop("disabled", true);
     componentsToDisable = ["#selectSubject", "#formSubjectInput", "#formFileInput", "#deleteSubject", "#addEducationdata"]
+    // действие по нажатию кнопки добавления данных в базу
     $('#addEducationdata').on('click', async function() {
         ChangeDisabled(true);
         var data = CollectDataToSend();
@@ -25,6 +27,7 @@ $(document).ready(function (e){
         }
         ChangeDisabled(false);
     });
+    // действие по нажатию кнопки удаления данных из базы
     $('#deleteSubject').on('click', async function() {
         ChangeDisabled(true);
         var form_data = new FormData();
@@ -34,7 +37,7 @@ $(document).ready(function (e){
 
         ChangeDisabled(false);
     });
-
+    // действие по смене дисциплины
     $('#selectSubject').on('change', function (e) {
         if ($('select[name="selectSubject"]').val() == "Не выбрано")
         {
